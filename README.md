@@ -81,6 +81,7 @@ Execute command:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" (slient)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output (with output)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output -save (with output and save output to file)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -clear (remove temporary class for command result storage)
    
 Filetransfer:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -upload -src-file "./evil.exe" -dest-file "C:\windows\temp\evil.exe" (Upload file over 512KB)
