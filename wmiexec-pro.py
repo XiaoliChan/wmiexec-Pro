@@ -65,9 +65,9 @@ class WMIEXEC:
             
             if self.__options.module == "exec-command":
                 executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
-                if self.__options.command != None and self.__options.with_output == False:
+                if self.__options.command != (None or "") and self.__options.with_output == False:
                     executer_ExecCommand.exec_command_silent(command=self.__options.command)
-                elif self.__options.command != None and self.__options.with_output == True:
+                elif self.__options.command != (None or "") and self.__options.with_output == True:
                     if self.__options.save == True:
                         executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr)
                     else:
@@ -79,10 +79,13 @@ class WMIEXEC:
             
             if self.__options.module == "filetransfer":
                 executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login)
-                if self.__options.upload == True:
-                    executer_Transfer.uploadFile(src_File=self.__options.src_file, dest_File=r'%s'%self.__options.dest_file)
-                elif self.__options.download == True:
-                    executer_Transfer.downloadFile(target_File=r'%s'%self.__options.src_file, save_Location=self.__options.dest_file)
+                if self.__options.src_file != (None or "") and self.__options.dest_file != (None or ""):
+                    if self.__options.upload == True:
+                        executer_Transfer.uploadFile(src_File=self.__options.src_file, dest_File=r'%s'%self.__options.dest_file)
+                    elif self.__options.download == True:
+                        executer_Transfer.downloadFile(target_File=r'%s'%self.__options.src_file, save_Location=self.__options.dest_file)
+                elif self.__options.clear == True:
+                    executer_Transfer.clear()
                 else:
                     print("[-] Wrong operation")
             
@@ -198,8 +201,9 @@ if __name__ == '__main__':
     file_transfer = subparsers.add_parser('filetransfer', help='Upload/Download file through wmi class.')
     file_transfer.add_argument('-upload', action='store_true', help='Upload file.')
     file_transfer.add_argument('-download', action='store_true', help='Download file.')
-    file_transfer.add_argument('-src-file', action='store', required=True, help='Source file with fully path (include filename)')
-    file_transfer.add_argument('-dest-file', action='store', required=True, help='Dest file with fully path (include filename)')
+    file_transfer.add_argument('-src-file', action='store', help='Source file with fully path (include filename)')
+    file_transfer.add_argument('-dest-file', action='store', help='Dest file with fully path (include filename)')
+    file_transfer.add_argument('-clear', action='store_true', help='Remove temporary class for storage binary data')
     
     # rdp.py
     rdp_parser = subparsers.add_parser('rdp', help='Enable/Disable Remote desktop service.')

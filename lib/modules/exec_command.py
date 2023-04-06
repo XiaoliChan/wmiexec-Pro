@@ -59,7 +59,7 @@ class EXEC_COMMAND():
         filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
         #tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
 
-        # Experimental: use timer instead of WQL
+        # Experimental: use timer instead of filter query
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
         
         # Wait 5 seconds for next step.

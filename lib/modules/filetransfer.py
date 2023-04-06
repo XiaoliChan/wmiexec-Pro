@@ -89,16 +89,9 @@ class filetransfer_Toolkit():
         # Check target file status.
         # Reuse iWbemServices object to avoid DCOM iWbemServices
         iWbemServices_Reuse = self.queryfile_Status(target_File.replace('\\','\\\\'), return_iWbemServices=True)
-
-        # Delete class first before creation
-        # :( self create wmi class have some issues, like can't remove instance
-        # Reuse cimv2 namespace
-        print("[+] Remove class first if it existed.")
-        iWbemServices_Reuse = class_Method.remove_Class(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse, return_iWbemServices=True)
-        
         # Reuse cimv2 namespace
         print("[+] Create evil class for file transfer.")
-        iWbemServices_Reuse = class_Method.create_Class(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse, return_iWbemServices=True)
+        iWbemServices_Reuse = class_Method.check_ClassStatus(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse, return_iWbemServices=True)
         
         # Load target file into class
         print("[+] Converting file to base64 string and load it into wmi class.")
@@ -124,7 +117,8 @@ class filetransfer_Toolkit():
         print("[+] Stop vbs interval execution after file downloaded")
         executer.remove_Event(tag)
 
-        # Reuse cimv2 namespace
-        # Remove class
-        class_Method.remove_Class(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse, return_iWbemServices=False)
-        
+    def clear(self, ClassName_StoreOutput=None):
+        if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataStorage"
+
+        class_Method = class_MethodEx(self.iWbemLevel1Login)
+        class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
