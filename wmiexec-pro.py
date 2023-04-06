@@ -65,13 +65,15 @@ class WMIEXEC:
             
             if self.__options.module == "exec-command":
                 executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
-                if self.__options.command != "" and self.__options.with_output == False:
+                if self.__options.command != None and self.__options.with_output == False:
                     executer_ExecCommand.exec_command_silent(command=self.__options.command)
-                elif self.__options.command != "" and self.__options.with_output == True:
+                elif self.__options.command != None and self.__options.with_output == True:
                     if self.__options.save == True:
                         executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr)
                     else:
                         executer_ExecCommand.exec_command_WithOutput(command=self.__options.command)
+                elif self.__options.clear == True:
+                    executer_ExecCommand.clear()
                 else:
                     print("[-] Wrong operation")
             
@@ -187,16 +189,17 @@ if __name__ == '__main__':
 
     # exec_command.py
     exec_command = subparsers.add_parser('exec-command', help='Execute command in with/without output way.')
-    exec_command.add_argument('-command', action='store', required=True, help='Specify command to execute')
+    exec_command.add_argument('-command', action='store', help='Specify command to execute')
     exec_command.add_argument('-with-output', action='store_true', help='Command execute with output (default is no output)')
     exec_command.add_argument('-save', action='store_true', help='Save command output to file (only support in "-with-output" mode)')
+    exec_command.add_argument('-clear', action='store_true', help='Remove temporary class for command result storage')
 
     # filetransfer.py
     file_transfer = subparsers.add_parser('filetransfer', help='Upload/Download file through wmi class.')
     file_transfer.add_argument('-upload', action='store_true', help='Upload file.')
     file_transfer.add_argument('-download', action='store_true', help='Download file.')
-    file_transfer.add_argument('-src-file', action='store', required=True, help='Source file with fully path(include filename)')
-    file_transfer.add_argument('-dest-file', action='store', required=True, help='Dest file with fully path(include filename)')
+    file_transfer.add_argument('-src-file', action='store', required=True, help='Source file with fully path (include filename)')
+    file_transfer.add_argument('-dest-file', action='store', required=True, help='Dest file with fully path (include filename)')
     
     # rdp.py
     rdp_parser = subparsers.add_parser('rdp', help='Enable/Disable Remote desktop service.')

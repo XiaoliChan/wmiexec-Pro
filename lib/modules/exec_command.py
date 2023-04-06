@@ -31,7 +31,7 @@ class EXEC_COMMAND():
 
         filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
         
-        print("[+] Executing command...")
+        print("[+] Executing command...(Sometime it will take a long time, please wait)")
         tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
         
         # Wait 5 seconds for next step.
@@ -51,13 +51,16 @@ class EXEC_COMMAND():
         with open('./lib/vbs-scripts/Exec-Command-WithOutput.vbs') as f: vbs = f.read()
         vbs = vbs.replace('REPLEACE_WITH_COMMAND', command).replace('REPLEACE_WITH_FILENAME', FileName).replace('REPLEACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLEACE_WITH_TASK',random_TaskName)
 
-        # Reuse cimv2 namespace
+        # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
-        iWbemServices_Reuse = class_Method.create_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=True)
+        iWbemServices_Reuse = class_Method.check_ClassStatus(ClassName=ClassName_StoreOutput, return_iWbemServices=True)
 
-        print("[+] Executing command...")
+        print("[+] Executing command...(Sometime it will take a long time, please wait)")
         filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
-        tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
+        #tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
+
+        # Experimental: use timer instead of WQL
+        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
         
         # Wait 5 seconds for next step.
         for i in range(5,0,-1):
@@ -75,5 +78,8 @@ class EXEC_COMMAND():
         if save_Result == True and hostname != None:
             self.save_ToFile(hostname, result)
 
-        # Reuse cimv2 namespace
-        class_Method.remove_Class(ClassName=ClassName_StoreOutput, iWbemServices=iWbemServices_Reuse, return_iWbemServices=False)
+    def clear(self, ClassName_StoreOutput=None):
+        if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
+
+        class_Method = class_MethodEx(self.iWbemLevel1Login)
+        class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)

@@ -12,7 +12,6 @@ class class_MethodEx():
     # Have no idea how to use IWbemServices::PutClass create class object via impacket function remotely.
     # So lets we jump in vbs :)
     # Prepare for download file
-    # ClassName is hardcode here
     def create_Class(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         with open('./lib/vbs-scripts/CreateClass.vbs') as f: vbs = f.read()
         vbs = vbs.replace('REPLEACE_WITH_CLASSNAME',ClassName)
@@ -35,6 +34,7 @@ class class_MethodEx():
             test_ClassObject, resp = iWbemServices.GetObject('%s.CreationClassName="Backup"' %ClassName)
         except Exception as e:
             print("\r\n[-] Unexpected error: %s"%str(e))
+            executer.remove_Event(tag)
         else:
             print("\r\n[+] Class: %s has been created!" %ClassName)
             # Clean up
@@ -44,7 +44,26 @@ class class_MethodEx():
         iWbemServices.RemRelease()
         # Return cimv2
         if return_iWbemServices is True: return iWbemServices
-    
+
+    def check_ClassStatus(self, ClassName, iWbemServices=None, return_iWbemServices=False):
+        if iWbemServices is None:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/Cimv2', NULL, NULL)
+            self.iWbemLevel1Login.RemRelease()
+        try:
+            test_ClassObject, resp = iWbemServices.GetObject('%s.CreationClassName="Backup"' %ClassName)
+        except Exception as e:
+            if "WBEM_E_INVALID_CLASS" in str(e):
+                print("[-] Class %s didn't exist, start creating class." %ClassName)
+                iWbemServices = self.create_Class(ClassName, iWbemServices=iWbemServices, return_iWbemServices=True)
+            else:
+                print("\r\n[-] Unexpected error: %s"%str(e))
+        else:
+            print("\r\n[+] Class: %s has been created!" %ClassName)
+        
+        iWbemServices.RemRelease()
+        # Return cimv2
+        if return_iWbemServices is True: return iWbemServices
+
     def remove_Class(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         if iWbemServices is None:
             iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/Cimv2', NULL, NULL)
