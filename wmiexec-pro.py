@@ -65,9 +65,10 @@ class WMIEXEC:
             
             if self.__options.module == "exec-command":
                 executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
-                if self.__options.command != (None or "") and self.__options.with_output == False:
+                
+                if self.__options.command not in ("", None) and self.__options.with_output == False:
                     executer_ExecCommand.exec_command_silent(command=self.__options.command)
-                elif self.__options.command != (None or "") and self.__options.with_output == True:
+                elif self.__options.command not in ("", None) and self.__options.with_output == True:
                     if self.__options.save == True:
                         executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr)
                     else:
@@ -76,10 +77,10 @@ class WMIEXEC:
                     executer_ExecCommand.clear()
                 else:
                     print("[-] Wrong operation")
-            
+                
             if self.__options.module == "filetransfer":
                 executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login)
-                if self.__options.src_file != (None or "") and self.__options.dest_file != (None or ""):
+                if self.__options.src_file not in ("", None) and self.__options.dest_file not in ("", None):
                     if self.__options.upload == True:
                         executer_Transfer.uploadFile(src_File=self.__options.src_file, dest_File=r'%s'%self.__options.dest_file)
                     elif self.__options.download == True:
