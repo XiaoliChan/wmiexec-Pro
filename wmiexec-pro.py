@@ -1,11 +1,6 @@
 from __future__ import division
 from __future__ import print_function
-import struct
 import sys
-import zlib
-import base64
-import os
-import cmd
 import argparse
 import time
 import logging
@@ -17,6 +12,7 @@ from lib.modules.rdp import RDP_Toolkit
 from lib.modules.winrm import WINRM_Toolkit
 from lib.modules.firewall import Firewall_Toolkit
 from lib.modules.eventlog_fucker import eventlog_Toolkit
+from lib.modules.service_mgr import Service_Toolkit
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.examples import logger
 from impacket.examples.utils import parse_target
@@ -65,10 +61,9 @@ class WMIEXEC:
             
             if self.__options.module == "exec-command":
                 executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
-                
-                if self.__options.command not in ("", None) and self.__options.with_output == False:
+                if all([self.__options.command]) and self.__options.with_output == False:
                     executer_ExecCommand.exec_command_silent(command=self.__options.command)
-                elif self.__options.command not in ("", None) and self.__options.with_output == True:
+                elif all([self.__options.command]) and self.__options.with_output == True:
                     if self.__options.save == True:
                         executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr)
                     else:
@@ -77,10 +72,10 @@ class WMIEXEC:
                     executer_ExecCommand.clear()
                 else:
                     print("[-] Wrong operation")
-                
+
             if self.__options.module == "filetransfer":
                 executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login)
-                if self.__options.src_file not in ("", None) and self.__options.dest_file not in ("", None):
+                if all([self.__options.src_file and self.__options.dest_file]):
                     if self.__options.upload == True:
                         executer_Transfer.uploadFile(src_File=self.__options.src_file, dest_File=r'%s'%self.__options.dest_file)
                     elif self.__options.download == True:
@@ -114,12 +109,12 @@ class WMIEXEC:
             
             if self.__options.module == "firewall":
                 executer_Firewall = Firewall_Toolkit(iWbemLevel1Login)
-                if self.__options.search_port:
+                if all([self.__options.search_port]):
                     executer_Firewall.port_Searcher(self.__options.search_port)
                 elif self.__options.dump:
                     executer_Firewall.dump_FirewallRules(self.__options.dump)
-                elif self.__options.rule_id and self.__options.rule_op:
-                    executer_Firewall.rule_Controller(ID=self.__options.rule_id, flag=self.__options.rule_op)
+                elif all([self.__options.rule_id]) and self.__options.action:
+                    executer_Firewall.rule_Controller(ID=self.__options.rule_id, flag=self.__options.action)
                 elif self.__options.firewall_profile:
                     executer_Firewall.FirewallProfile_Controller(self.__options.firewall_profile)
                 else:
@@ -133,19 +128,31 @@ class WMIEXEC:
                     executer_EventLog.retrieve_EventLog(self.__options.retrieve)
                 else:
                     print("[-] Wrong operation")
-            
+
+            if self.__options.module == "service":
+                executer_Service = Service_Toolkit(iWbemLevel1Login)
+                if self.__options.action:
+                    if self.__options.action == "create" and all([self.__options.service_name, self.__options.display_name, self.__options.bin_path]):
+                        executer_Service.create_Service(self.__options.service_name, self.__options.display_name, self.__options.bin_path, self.__options._class)
+                    elif self.__options.action not in ['create']:
+                        executer_Service.control_Service(self.__options.action, self.__options.service_name)
+                elif self.__options.dump:
+                    executer_Service.dump_Service(self.__options.dump)
+                else:
+                    print("[-] Wrong operation")
+
             if self.__options.module == "execute-vbs":
                 executer_VBS = executeVBS_Toolkit(iWbemLevel1Login)
-                if self.__options.vbs != "" and self.__options.filter != "":
+                if all([self.__options.vbs and self.__options.filter]):
                     executer_VBS.ExecuteVBS(vbs_file=self.__options.vbs, filer_Query=self.__options.filter)
-                elif self.__options.vbs != "" and self.__options.timer != "":
+                elif all([self.__options.vbs and self.__options.timer]):
                     executer_VBS.ExecuteVBS(vbs_file=self.__options.vbs, timer=self.__options.timer)
                 elif self.__options.remove:
                     executer_VBS.remove_Event(self.__options.remove)
                 else:
                     print("[-] Wrong operation")
 
-        except  (Exception, KeyboardInterrupt) as e:
+        except (Exception, KeyboardInterrupt) as e:
             if logging.getLogger().level == logging.DEBUG:
                 import traceback
                 traceback.print_exc()
@@ -221,17 +228,28 @@ if __name__ == '__main__':
     # firewall.py
     firewall_parser = subparsers.add_parser('firewall', help='Firewall abusing.')
     firewall_parser.add_argument('-search-port', action='store', metavar="port num", help='Search rules associate with the port.')
-    firewall_parser.add_argument('-dump', action='store', help='Dump all firewall rules to file as json type.')
+    firewall_parser.add_argument('-dump', action='store', metavar="FILENAME", help='Dump all firewall rules to file as json format.')
     firewall_parser.add_argument('-rule-id', action='store', metavar="ID", help='Specify firewall rule instance id to do operation in "-rule-op"')
-    firewall_parser.add_argument('-rule-op', action='store', default='disable', choices=['enable', 'disable', 'remove'],
-                                 help='Operation in firewall rule which you can control')
+    firewall_parser.add_argument('-action', action='store', default='disable', choices=['enable', 'disable', 'remove'],
+                                 help='Action of firewall rule which you specify.')
     firewall_parser.add_argument('-firewall-profile', action='store', choices=['enable','disable'],
                                  help='Use it on your own risk if you try to do this one.')
     
-    # Eventlog-fucker.py
+    # eventlog-fucker.py
     eventlog_parser = subparsers.add_parser('eventlog', help='Loopping cleanning eventlog.')
     eventlog_parser.add_argument('-risk-i-know', action='store_true', help='You know what will happen :)')
     eventlog_parser.add_argument('-retrieve', action='store', metavar="ID", help='Stop looping cleaning eventlog with the instance id.')
+
+    # service_mgr.py
+    service_MgrParser = subparsers.add_parser('service', help='Service manager')
+    service_MgrParser.add_argument('-action', action="store", choices=['create', 'delete', 'start', 'stop', 'disable', 'auto-start', 'manual-start', 'getinfo'], 
+                                   help='Action you want to do.')
+    service_MgrParser.add_argument('-service-name', action='store', help='Specify service name.')
+    service_MgrParser.add_argument('-display-name', action='store', help='Specify service display name.')
+    service_MgrParser.add_argument('-bin-path', action='store', help='Specify binary path of service creation.')
+    service_MgrParser.add_argument('-class', dest='_class', action='store', choices=['Win32_Service', 'Win32_TerminalService', 'Win32_BaseService'], default='Win32_Service',
+                                   help='Alternative class of service object creation.')
+    service_MgrParser.add_argument('-dump', action='store', metavar="FILENAME", help='Dump all services to file as json format.')
 
     # executeVBS.py
     execute_VBSParser = subparsers.add_parser('execute-vbs', help='Execute vbs file.')

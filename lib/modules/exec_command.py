@@ -21,7 +21,6 @@ class EXEC_COMMAND():
         with open("{}/{}".format(path, save_FileName), 'w') as f: f.write(content)
         print("[+] Save command result to: {}/{}".format(path, save_FileName))
 
-
     def exec_command_silent(self, command):
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
 

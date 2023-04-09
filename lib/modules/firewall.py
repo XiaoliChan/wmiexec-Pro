@@ -24,7 +24,7 @@ class Firewall_Toolkit:
             logging.info('%s - OK' % banner)
 
     def port_Searcher(self, port, returnID = False):
-        print("[+] Searching rule include the specified port...")
+        print("[+] Searching rule include the specified port: %s" %port)
         id_List = []
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/StandardCimv2', NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
