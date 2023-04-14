@@ -25,8 +25,12 @@ class EXEC_COMMAND():
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
 
         random_TaskName = str(uuid.uuid4())
+
+        if '"' in command: command = command.replace('"',r'""')
+        if "'" in command: command = command.replace("'",r'""')
+
         with open('./lib/vbs-scripts/Exec-Command-Silent.vbs') as f: vbs = f.read()
-        vbs = vbs.replace('REPLEACE_WITH_COMMAND',command).replace('REPLEACE_WITH_TASK',random_TaskName)
+        vbs = vbs.replace('REPLACE_WITH_COMMAND',command).replace('REPLACE_WITH_TASK',random_TaskName)
 
         filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
         
@@ -47,8 +51,12 @@ class EXEC_COMMAND():
         FileName = str(uuid.uuid4()) + ".log"
         CMD_instanceID = str(uuid.uuid4())
         random_TaskName = str(uuid.uuid4())
+        
+        if '"' in command: command = command.replace('"',r'""')
+        if "'" in command: command = command.replace("'",r'""')
+
         with open('./lib/vbs-scripts/Exec-Command-WithOutput.vbs') as f: vbs = f.read()
-        vbs = vbs.replace('REPLEACE_WITH_COMMAND', command).replace('REPLEACE_WITH_FILENAME', FileName).replace('REPLEACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLEACE_WITH_TASK',random_TaskName)
+        vbs = vbs.replace('REPLACE_WITH_COMMAND', command).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)

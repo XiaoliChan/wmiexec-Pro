@@ -14,7 +14,7 @@ class class_MethodEx():
     # Prepare for download file
     def create_Class(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         with open('./lib/vbs-scripts/CreateClass.vbs') as f: vbs = f.read()
-        vbs = vbs.replace('REPLEACE_WITH_CLASSNAME',ClassName)
+        vbs = vbs.replace('REPLACE_WITH_CLASSNAME',ClassName)
 
         print("[+] Creating class: %s"%ClassName)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)

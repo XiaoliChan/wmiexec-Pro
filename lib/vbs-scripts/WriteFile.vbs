@@ -2,8 +2,8 @@
 ' Const data="d2hvYW1pCg=="
 ' outputFile="c:\c.txt"
 
-outputFile="REPLEACE_WITH_DEST"
-Const data="REPLEACE_WITH_DATA"
+outputFile="REPLACE_WITH_DEST"
+Const data="REPLACE_WITH_DATA"
 
 Set oXML = CreateObject("Msxml2.DOMDocument")
 Set oNode = oXML.CreateElement("base64")

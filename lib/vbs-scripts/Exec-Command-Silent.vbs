@@ -24,7 +24,7 @@ Set trigger = triggers.Create(7)
 Dim Action
 Set Action = taskDefinition.Actions.Create(ActionTypeExec)
 Action.Path = "c:\windows\system32\cmd.exe"
-Action.arguments = chr(34) & "/c REPLEACE_WITH_COMMAND" & chr(34)
+Action.arguments = chr(34) & "/c REPLACE_WITH_COMMAND" & chr(34)
 Dim objNet, LoginUser
 Set objNet = CreateObject("WScript.Network")
 LoginUser = objNet.UserName
@@ -32,5 +32,5 @@ If UCase(LoginUser) = "SYSTEM" Then
 Else
 LoginUser = Empty
 End If
-Call rootFolder.RegisterTaskDefinition("REPLEACE_WITH_TASK", taskDefinition, 6, LoginUser, , 3)
-Call rootFolder.DeleteTask("REPLEACE_WITH_TASK",0)
+Call rootFolder.RegisterTaskDefinition("REPLACE_WITH_TASK", taskDefinition, 6, LoginUser, , 3)
+Call rootFolder.DeleteTask("REPLACE_WITH_TASK",0)
