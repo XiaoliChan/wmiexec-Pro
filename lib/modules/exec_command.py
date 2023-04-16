@@ -34,7 +34,7 @@ class EXEC_COMMAND():
         LocalTime = dict(LocalTime.getProperties())
 
         # Get remaining seconds until the next minute.
-        for i in range((60-int(LocalTime['Second']['value'])),0,-1):
+        for i in range((65-int(LocalTime['Second']['value'])),0,-1):
             print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
             time.sleep(1)
         
