@@ -5,6 +5,7 @@ import argparse
 import time
 import logging
 
+from lib.modules.enumrate import ENUM
 from lib.modules.amsi import AMSI
 from lib.modules.exec_command import EXEC_COMMAND
 from lib.modules.filetransfer import filetransfer_Toolkit
@@ -17,10 +18,8 @@ from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.examples import logger
 from impacket.examples.utils import parse_target
 from impacket import version
-from impacket.dcerpc.v5.dcomrt import DCOMConnection, COMVERSION, OBJREF_CUSTOM
+from impacket.dcerpc.v5.dcomrt import DCOMConnection, COMVERSION
 from impacket.dcerpc.v5.dcom import wmi
-from impacket.dcerpc.v5.dcom.wmi import ENCODING_UNIT
-from impacket.dcerpc.v5.dtypes import NULL, NDRPOINTERNULL
 from impacket.krb5.keytab import Keytab
 from six import PY2
 
@@ -50,6 +49,13 @@ class WMIEXEC:
             iInterface = dcom.CoCreateInstanceEx(wmi.CLSID_WbemLevel1Login, wmi.IID_IWbemLevel1Login)
             iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
             
+            if self.__options.module == "enum":
+                executer_ENUM = ENUM(iWbemLevel1Login)
+                if self.__options.run == True:
+                    executer_ENUM.basic_Enum()
+                else:
+                    print("[-] Wrong operation")
+
             if self.__options.module == "amsi":
                 executer_AMSI = AMSI(iWbemLevel1Login)
                 if self.__options.enable == True and self.__options.disable == False:
@@ -62,14 +68,15 @@ class WMIEXEC:
             if self.__options.module == "exec-command":
                 executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
                 if all([self.__options.command]) and self.__options.with_output == False:
-                    executer_ExecCommand.exec_command_silent(command=self.__options.command)
+                    executer_ExecCommand.exec_command_silent(command=self.__options.command, old=self.__options.old)
                 elif all([self.__options.command]) and self.__options.with_output == True:
                     if self.__options.save == True:
-                        executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr)
+                        executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr, old=self.__options.old)
                     else:
-                        executer_ExecCommand.exec_command_WithOutput(command=self.__options.command)
+                        executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, old=self.__options.old)
                 elif self.__options.clear == True:
-                    executer_ExecCommand.clear()
+                    #executer_ExecCommand.clear()
+                    executer_ExecCommand.check_Version()
                 else:
                     print("[-] Wrong operation")
 
@@ -88,9 +95,9 @@ class WMIEXEC:
             if self.__options.module == "rdp":
                 executer_RDP = RDP_Toolkit(iWbemLevel1Login)
                 if self.__options.enable == True:
-                    executer_RDP.rdp_Wrapper("enable")
+                    executer_RDP.rdp_Wrapper("enable", old=self.__options.old)
                 elif self.__options.disable == True:
-                    executer_RDP.rdp_Wrapper("disable")
+                    executer_RDP.rdp_Wrapper("disable", old=self.__options.old)
                 elif self.__options.enable_ram == True:
                     executer_RDP.ram_Wrapper("enable")
                 elif self.__options.disable_ram == True:
@@ -193,6 +200,10 @@ if __name__ == '__main__':
                                                                             'ommited it use the domain part (FQDN) specified in the target parameter')
     group.add_argument('-keytab', action="store", help='Read keys for SPN from keytab file')
 
+    # enumerate.py
+    enum_parser = subparsers.add_parser('enum', help='Enumerate system info')
+    enum_parser.add_argument('-run', action='store_true', help='Doing basic enumeration')
+
     # amsi.py
     amsi_parser = subparsers.add_parser('amsi', help='Bypass AMSI with registry key "AmsiEnable".')
     amsi_parser.add_argument('-enable', action='store_true', help='Enable AMSI bypass')
@@ -201,6 +212,7 @@ if __name__ == '__main__':
     # exec_command.py
     exec_command = subparsers.add_parser('exec-command', help='Execute command in with/without output way.')
     exec_command.add_argument('-command', action='store', help='Specify command to execute')
+    exec_command.add_argument('-old', action='store_true', help='Execute command for old system versio nunder NT6.')
     exec_command.add_argument('-with-output', action='store_true', help='Command execute with output (default is no output)')
     exec_command.add_argument('-save', action='store_true', help='Save command output to file (only support in "-with-output" mode)')
     exec_command.add_argument('-clear', action='store_true', help='Remove temporary class for command result storage')
@@ -219,6 +231,7 @@ if __name__ == '__main__':
     rdp_parser.add_argument('-enable-ram', action='store_true', help='Enable Restricted Admin Mode for PTH')
     rdp_parser.add_argument('-disable', action='store_true', help='Disable RDP service')
     rdp_parser.add_argument('-disable-ram', action='store_true', help='Disable Restricted Admin Mode')
+    rdp_parser.add_argument('-old', action='store_true', help="Enable/Disable RDP for old system versio nunder NT6.")
 
     # winrm.py
     winrm_parser = subparsers.add_parser('winrm', help='Enable/Disable WINRM service.')
@@ -253,10 +266,9 @@ if __name__ == '__main__':
 
     # executeVBS.py
     execute_VBSParser = subparsers.add_parser('execute-vbs', help='Execute vbs file.')
-    execute_VBSParser.add_argument('-vbs', action="store", required=True, help='VBS filename containing the script you want to run')
+    execute_VBSParser.add_argument('-vbs', action="store", help='VBS filename containing the script you want to run')
     execute_VBSParser.add_argument('-filter', action="store", help='The WQL filter string that will trigger the script.')
-    execute_VBSParser.add_argument('-timer', action='store', required=False, help='The amount of milliseconds after the script will be triggered'
-                                    '1000 milliseconds = 1 second')
+    execute_VBSParser.add_argument('-timer', action='store', help='The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second')
     execute_VBSParser.add_argument('-remove', action="store", help='Remove wmi event with ID.')
 
     if len(sys.argv) == 1:

@@ -1,6 +1,6 @@
 from impacket.dcerpc.v5.dtypes import NULL
 
-class AMSI:
+class AMSI():
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
     

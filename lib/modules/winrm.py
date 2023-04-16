@@ -4,7 +4,7 @@ from lib.modules.service_mgr import Service_Toolkit
 from lib.modules.firewall import Firewall_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
 
-class WINRM_Toolkit:
+class WINRM_Toolkit():
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
 
