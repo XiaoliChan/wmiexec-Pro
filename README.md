@@ -34,6 +34,8 @@ The new generation of wmiexec.py, more new features, whole the operations only w
 
 ## Features
 
+- Main feature: AV Evasion
+- Main feature: No `win32_process` needed
 - Main feature: Only need port 135.
 - New module: AMSI bypass
 - New module: File transfer
