@@ -21,6 +21,7 @@ class WINRM_Toolkit():
 
     def configure_Firewall(self,flag):
         winrm_Firewall = Firewall_Toolkit(self.iWbemLevel1Login)
-        id_List = winrm_Firewall.port_Searcher("5985", returnID=True)
+        print("[+] Configuring winrm firewall...")
+        id_List = ['WINRM-HTTP-In-TCP', 'WINRM-HTTP-In-TCP-PUBLIC']
         for i in id_List:
             winrm_Firewall.rule_Controller(i,flag)
