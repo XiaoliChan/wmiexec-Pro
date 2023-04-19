@@ -84,34 +84,17 @@ class Firewall_Toolkit:
         record = dict(firewall_RuleClass.getProperties())
         if flag in ['enable','disable']:
             firewall_Instance = firewall_RuleClass.SpawnInstance()
-            # windows only accept encoded string with latin-1, if chinese character in value, will get exception in impacket/structure.py line 250
-            # Have no idea how to solve this, let's submit uuid instead of original character
-            try:
-                b(record['ElementName']['value'])
-            except:
-                firewall_Instance.ElementName = "windows-object-" + str(uuid.uuid4())
-            else:
-                firewall_Instance.ElementName = record['ElementName']['value']
-            
-            try:
-                b(record['DisplayName']['value'])
-            except:
-                firewall_Instance.DisplayName = "windows-object-" + str(uuid.uuid4())
-            else:
-                firewall_Instance.DisplayName = record['DisplayName']['value']
+            # "" means not change value
+            firewall_Instance.ElementName = ""
+            firewall_Instance.DisplayName = ""
+            firewall_Instance.Description = ""
+            firewall_Instance.DisplayGroup = ""
 
-            try:
-                b(record['Description']['value'])
-            except:
-                firewall_Instance.Description = "windows-object-" + str(uuid.uuid4())
-            else:
-                firewall_Instance.Description = "" if record['Description']['value'] == None else record['Description']['value']
-            
             # allow=2, allowBypass=3, Block=4
             firewall_Instance.Action = record['Action']['value']
             firewall_Instance.Caption = "" if record['Caption']['value'] == None else record['Caption']['value']
             firewall_Instance.CommonName = "" if record['CommonName']['value'] == None else record['CommonName']['value']
-            firewall_Instance.DisplayGroup = "" if record['DisplayGroup']['value'] == None else record['DisplayGroup']['value']
+            
             # Enable = 1, disable = 2
             firewall_Instance.Enabled = 2 if flag == "disable" else 1
             firewall_Instance.LocalOnlyMapping = False if record['LocalOnlyMapping']['value'] == 'False' else True
