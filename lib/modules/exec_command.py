@@ -64,7 +64,7 @@ class EXEC_COMMAND():
         Win32_TimeZone = iEnumWbemClassObject.Next(0xffffffff, 1)[0]
 
         executeTime = "********" + str(execute_time).replace(":", '') + ".000000+" + str(Win32_TimeZone.Bias)
-        command=r'C:\Windows\System32\cmd.exe /c %s'%command
+        command=r'C:\Windows\System32\cmd.exe /c "%s"'%command
         Win32_ScheduledJob,resp=iWbemServices.GetObject("Win32_ScheduledJob")
         result = Win32_ScheduledJob.Create(command, executeTime, 0, 0, 0, 1)
         if int(result.ReturnValue) == 0:

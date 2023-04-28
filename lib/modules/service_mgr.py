@@ -1,3 +1,4 @@
+import sys
 import logging
 import json
 
@@ -32,8 +33,9 @@ ERROR_MSG = {
 }
 
 class Service_Toolkit:
-    def __init__(self, iWbemLevel1Login):
+    def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
+        self.dcom = dcom
 
     @staticmethod
     def checkError(banner, resp):
@@ -74,6 +76,8 @@ class Service_Toolkit:
                 print("[-] Service not found!")
             else:
                 print("[-] Unknown error: %s" %str(e))
+            self.dcom.disconnect()
+            sys.exit(1)
         else:
             if action == "delete":
                 resp = Service_ClassObject.Delete()

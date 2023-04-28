@@ -9,8 +9,9 @@ from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
 
 class filetransfer_Toolkit():
-    def __init__(self, iWbemLevel1Login):
+    def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
+        self.dcom = dcom
     
     @staticmethod
     def checkError(banner, resp):
@@ -37,9 +38,10 @@ class filetransfer_Toolkit():
         except Exception as e:
             if "WBEM_S_FALSE" in str(e):
                 print("[-] File not existed!")
-                sys.exit(0)
             else:
                 print("[-] Unexpected error: %s"%str(e))
+            self.dcom.disconnect()
+            sys.exit(0)
         else:
             file_Status = dict(file_Class.getProperties())
             print("[+] File status: {}, File size: {} KB, File location: {}".format(

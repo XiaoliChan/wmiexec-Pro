@@ -31,7 +31,7 @@ class RDP_Toolkit():
             if flag == 'enable':
                 print("[+] Enabling RDP services (old system not support setting up firewall)")
                 iWbemClassObject.SetAllowTSConnections(1)
-                self.query_RDPPort(old=True)
+                self.query_RDPPort()
             elif flag == 'disable':
                 print("[+] Disabling RDP services (old system not support setting up firewall)")
                 iWbemClassObject.SetAllowTSConnections(0)
@@ -67,11 +67,8 @@ class RDP_Toolkit():
                 print("[+] RDP enabled!")
         iWbemServices.RemRelease()
 
-    def query_RDPPort(self, old=False):
-        if old == False:
-            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
-        else:
-            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
+    def query_RDPPort(self):
+        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
         StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
         out = StdRegProv.GetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp', 'PortNumber')
