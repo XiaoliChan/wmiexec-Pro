@@ -81,14 +81,11 @@ class EXEC_COMMAND():
             executer = executeVBS_Toolkit(self.iWbemLevel1Login)
 
             random_TaskName = str(uuid.uuid4())
-
-            if '"' in command: command = command.replace('"',r'""')
-            if "'" in command: command = command.replace("'",r'""')
             
             print("[+] Executing command...(Sometime it will take a long time, please wait)")
 
             with open('./lib/vbscripts/Exec-Command-Silent.vbs') as f: vbs = f.read()
-            vbs = vbs.replace('REPLACE_WITH_COMMAND',command).replace('REPLACE_WITH_TASK',random_TaskName)
+            vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_TASK',random_TaskName)
             
             # Experimental: use timer instead of filter query
             tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
@@ -112,9 +109,6 @@ class EXEC_COMMAND():
         FileName = str(uuid.uuid4()) + ".log"
         CMD_instanceID = str(uuid.uuid4())
         random_TaskName = str(uuid.uuid4())
-        
-        if '"' in command: command = command.replace('"',r'""')
-        if "'" in command: command = command.replace("'",r'""')
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
@@ -124,7 +118,7 @@ class EXEC_COMMAND():
         if old == False:
             # Experimental: use timer instead of filter query
             with open('./lib/vbscripts/Exec-Command-WithOutput.vbs') as f: vbs = f.read()
-            vbs = vbs.replace('REPLACE_WITH_COMMAND', command).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
+            vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
             tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
             #filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
             #tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
@@ -136,7 +130,7 @@ class EXEC_COMMAND():
         else:
             # Experimental: use timer instead of filter query
             with open('./lib/vbscripts/Exec-Command-WithOutput-UnderNT6.vbs') as f: vbs = f.read()
-            vbs = vbs.replace('REPLACE_WITH_COMMAND', command).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID)
+            vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID)
             tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
             
             # Reuse cimv2

@@ -1,5 +1,7 @@
 Dim time_zone
 Dim exec_time
+Dim command
+command = "c:\windows\system32\cmd.exe /c "& Base64StringDecode("REPLACE_WITH_COMMAND")
 
 AddJobWithRes
 
@@ -24,7 +26,24 @@ Function AddJobWithRes()
 	GetTime()
 	Set objSWbemService = GetObject("Winmgmts:root\cimv2")
     exec_time = "********"&exec_time&"00.000000"&time_zone
-	command = "c:\windows\system32\cmd.exe /c REPLACE_WITH_COMMAND"
     Set objNewJob = objSWbemService.Get("Win32_ScheduledJob")
     errJobCreated = objNewJob.Create(command, exec_time, True , , , True, JobId)
+End Function
+
+Function Base64StringDecode(ByVal vCode)
+    Set oXML = CreateObject("Msxml2.DOMDocument")
+    Set oNode = oXML.CreateElement("base64")
+    oNode.dataType = "bin.base64"
+    oNode.text = vCode
+    Set BinaryStream = CreateObject("ADODB.Stream")
+    BinaryStream.Type = 1
+    BinaryStream.Open
+    BinaryStream.Write oNode.nodeTypedValue
+    BinaryStream.Position = 0
+    BinaryStream.Type = 2
+    ' All Format =>  utf-16le - utf-8 - utf-16le
+    BinaryStream.CharSet = "utf-8"
+    Base64StringDecode = BinaryStream.ReadText
+    Set BinaryStream = Nothing
+    Set oNode = Nothing
 End Function

@@ -68,9 +68,9 @@ class WMIEXEC:
             
             if self.__options.module == "exec-command":
                 executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
-                if all([self.__options.command]) and self.__options.with_output == False:
+                if all([self.__options.command]) and self.__options.silent == True:
                     executer_ExecCommand.exec_command_silent(command=self.__options.command, old=self.__options.old)
-                elif all([self.__options.command]) and self.__options.with_output == True:
+                elif all([self.__options.command]) and self.__options.silent == False:
                     if self.__options.save == True:
                         executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr, old=self.__options.old)
                     else:
@@ -238,8 +238,8 @@ if __name__ == '__main__':
     exec_command = subparsers.add_parser('exec-command', help='Execute command in with/without output way.')
     exec_command.add_argument('-command', action='store', help='Specify command to execute')
     exec_command.add_argument('-old', action='store_true', help='Execute command for old system versio nunder NT6.')
-    exec_command.add_argument('-with-output', action='store_true', help='Command execute with output (default is no output)')
-    exec_command.add_argument('-save', action='store_true', help='Save command output to file (only support in "-with-output" mode)')
+    exec_command.add_argument('-silent', action='store_true', help='Command execute with output (default is no output)')
+    exec_command.add_argument('-save', action='store_true', help='Save command output to file (not support silent mode)')
     exec_command.add_argument('-clear', action='store_true', help='Remove temporary class for command result storage')
 
     # filetransfer.py

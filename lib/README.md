@@ -43,8 +43,6 @@ The new generation of wmiexec.py, more new features, whole the operations only w
 - New module: Windows firewall abusing
 - New module: Eventlog looping cleaning
 - New module: Remote enable WinRM without touching CMD
-- New module: Service manager
-- New module: RID-Hijack
 - Enhancement: Get command execution output in new way
 - Enhancement: Execute vbs file
 

@@ -24,7 +24,9 @@ Set trigger = triggers.Create(7)
 Dim Action
 Set Action = taskDefinition.Actions.Create(ActionTypeExec)
 Action.Path = "c:\windows\system32\cmd.exe"
-Action.arguments = chr(34) & "/c REPLACE_WITH_COMMAND" & chr(34)
+Dim command
+command = Base64StringDecode("REPLACE_WITH_COMMAND")
+Action.arguments = chr(34) & "/c " & command & chr(34)
 Dim objNet, LoginUser
 Set objNet = CreateObject("WScript.Network")
 LoginUser = objNet.UserName
@@ -34,3 +36,21 @@ LoginUser = Empty
 End If
 Call rootFolder.RegisterTaskDefinition("REPLACE_WITH_TASK", taskDefinition, 6, LoginUser, , 3)
 Call rootFolder.DeleteTask("REPLACE_WITH_TASK",0)
+
+Function Base64StringDecode(ByVal vCode)
+    Set oXML = CreateObject("Msxml2.DOMDocument")
+    Set oNode = oXML.CreateElement("base64")
+    oNode.dataType = "bin.base64"
+    oNode.text = vCode
+    Set BinaryStream = CreateObject("ADODB.Stream")
+    BinaryStream.Type = 1
+    BinaryStream.Open
+    BinaryStream.Write oNode.nodeTypedValue
+    BinaryStream.Position = 0
+    BinaryStream.Type = 2
+    ' All Format =>  utf-16le - utf-8 - utf-16le
+    BinaryStream.CharSet = "utf-8"
+    Base64StringDecode = BinaryStream.ReadText
+    Set BinaryStream = Nothing
+    Set oNode = Nothing
+End Function
