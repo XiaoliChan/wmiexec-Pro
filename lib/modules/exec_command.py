@@ -64,7 +64,7 @@ class EXEC_COMMAND():
         Win32_TimeZone = iEnumWbemClassObject.Next(0xffffffff, 1)[0]
 
         executeTime = "********" + str(execute_time).replace(":", '') + ".000000+" + str(Win32_TimeZone.Bias)
-        command=r'C:\Windows\System32\cmd.exe /c "%s"'%command
+        command=r'C:\Windows\System32\cmd.exe /c %s'%command
         Win32_ScheduledJob,resp=iWbemServices.GetObject("Win32_ScheduledJob")
         result = Win32_ScheduledJob.Create(command, executeTime, 0, 0, 0, 1)
         if int(result.ReturnValue) == 0:
@@ -77,6 +77,7 @@ class EXEC_COMMAND():
         iWbemServices.RemRelease()
 
     def exec_command_silent(self, command, old=False):
+        if "'" in command: command = command.replace("'",r'"')
         if old == False:
             executer = executeVBS_Toolkit(self.iWbemLevel1Login)
 
@@ -109,6 +110,8 @@ class EXEC_COMMAND():
         FileName = str(uuid.uuid4()) + ".log"
         CMD_instanceID = str(uuid.uuid4())
         random_TaskName = str(uuid.uuid4())
+
+        if "'" in command: command = command.replace("'",r'"')
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
