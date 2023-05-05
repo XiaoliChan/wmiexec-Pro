@@ -85,6 +85,7 @@ Enable/disable amsi bypass:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 amsi -disable
 
 Execute command:
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -shell (Launch a semi-interactive shell)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" (Default is with output mode)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -silent (Silent mode)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 exec-command -command "whoami" -silent -old (Slient mode in old version OS, such as server 2003)

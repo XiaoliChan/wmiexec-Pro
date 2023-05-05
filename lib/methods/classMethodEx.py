@@ -40,10 +40,12 @@ class class_MethodEx():
             # Clean up
             print("[+] Stop vbs interval execution after created class.")
             executer.remove_Event(tag)
-        
-        iWbemServices.RemRelease()
+
         # Return cimv2
-        if return_iWbemServices is True: return iWbemServices
+        if return_iWbemServices is True:
+            return iWbemServices
+        else:
+            iWbemServices.RemRelease()
 
     def check_ClassStatus(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         if iWbemServices is None:
@@ -60,9 +62,11 @@ class class_MethodEx():
         else:
             print("\r\n[+] Class: %s has been created!" %ClassName)
         
-        iWbemServices.RemRelease()
         # Return cimv2
-        if return_iWbemServices is True: return iWbemServices
+        if return_iWbemServices is True:
+            return iWbemServices
+        else:
+            iWbemServices.RemRelease()
 
     def remove_Class(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         if iWbemServices is None:
@@ -75,6 +79,9 @@ class class_MethodEx():
         sys.stdout = StringIO()
         iWbemServices.DeleteClass(ClassName)
         sys.stdout = current
-        iWbemServices.RemRelease()
+        
         # Return cimv2
-        if return_iWbemServices is True: return iWbemServices
+        if return_iWbemServices is True:
+            return iWbemServices
+        else:
+            iWbemServices.RemRelease()

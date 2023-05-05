@@ -7,7 +7,7 @@ import logging
 
 from lib.modules.enumrate import ENUM
 from lib.modules.amsi import AMSI
-from lib.modules.exec_command import EXEC_COMMAND
+from lib.modules.exec_command import EXEC_COMMAND, EXEC_COMMAND_SHELL
 from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.modules.rdp import RDP_Toolkit
 from lib.modules.winrm import WINRM_Toolkit
@@ -27,7 +27,6 @@ from six import PY2
 WBEM_FLAG_CREATE_ONLY = 0x00000002
 
 OUTPUT_FILENAME = '__' + str(time.time())
-CODEC = sys.stdout.encoding
 
 class WMIEXEC:
     def __init__(self, username='', password='', domain='', hashes=None, aesKey=None, doKerberos=False, kdcHost=None, options=None):
@@ -67,19 +66,31 @@ class WMIEXEC:
                     print("[-] Wrong operation")
             
             if self.__options.module == "exec-command":
-                executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login)
-                if all([self.__options.command]) and self.__options.silent == True:
-                    executer_ExecCommand.exec_command_silent(command=self.__options.command, old=self.__options.old)
-                elif all([self.__options.command]) and self.__options.silent == False:
-                    if self.__options.save == True:
-                        executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr, old=self.__options.old)
-                    else:
-                        executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, old=self.__options.old)
-                elif self.__options.clear == True:
-                    #executer_ExecCommand.clear()
-                    executer_ExecCommand.check_Version()
+                
+                if self.__options.shell == True:
+                    try:
+                        executer_Shell = EXEC_COMMAND_SHELL(iWbemLevel1Login, dcom, self.__options.codec)
+                        executer_Shell.cmdloop()
+                    except  (Exception, KeyboardInterrupt) as e:
+                        if logging.getLogger().level == logging.DEBUG:
+                            import traceback
+                            traceback.print_exc()
+                        logging.error(str(e))
+                        dcom.disconnect()
+                        sys.exit(1)
                 else:
-                    print("[-] Wrong operation")
+                    executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login, self.__options.codec)
+                    if all([self.__options.command]) and self.__options.silent == True:
+                        executer_ExecCommand.exec_command_silent(command=self.__options.command, old=self.__options.old)
+                    elif all([self.__options.command]) and self.__options.silent == False:
+                        if self.__options.save == True:
+                            executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, save_Result=True, hostname=addr, old=self.__options.old)
+                        else:
+                            executer_ExecCommand.exec_command_WithOutput(command=self.__options.command, old=self.__options.old)
+                    elif self.__options.clear == True:
+                        executer_ExecCommand.clear()
+                    else:
+                        print("[-] Wrong operation")
 
             if self.__options.module == "filetransfer":
                 executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login, dcom)
@@ -202,11 +213,11 @@ if __name__ == '__main__':
     parser.add_argument('target', action='store', help='[[domain/]username[:password]@]<targetName or address>')
     parser.add_argument('-ts', action='store_true', help='Adds timestamp to every logging output')
     parser.add_argument('-debug', action='store_true', help='Turn DEBUG output ON')
-    parser.add_argument('-codec', action='store', help='Sets encoding used (codec) from the target\'s output (default '
-                                                       '"%s"). If errors are detected, run chcp.com at the target, '
+    parser.add_argument('-codec', default="gbk", action='store', help='Sets encoding used (codec) from the target\'s output (default '
+                                                       '"gbk"). If errors are detected, run chcp.com at the target, '
                                                        'map the result with '
                                                        'https://docs.python.org/3/library/codecs.html#standard-encodings and then execute wmiexec.py '
-                                                       'again with -codec and the corresponding codec ' % CODEC)
+                                                       'again with -codec and the corresponding codec ')
     parser.add_argument('-com-version', action='store', metavar="MAJOR_VERSION:MINOR_VERSION",
                         help='DCOM version, format is MAJOR_VERSION:MINOR_VERSION e.g. 5.7')
     subparsers = parser.add_subparsers(help='modules', dest='module')
@@ -236,6 +247,7 @@ if __name__ == '__main__':
 
     # exec_command.py
     exec_command = subparsers.add_parser('exec-command', help='Execute command in with/without output way.')
+    exec_command.add_argument('-shell', action='store_true', help='Launch a semi-interactive shell')
     exec_command.add_argument('-command', action='store', help='Specify command to execute')
     exec_command.add_argument('-old', action='store_true', help='Execute command for old system versio nunder NT6.')
     exec_command.add_argument('-silent', action='store_true', help='Command execute with output (default is no output)')
@@ -313,12 +325,6 @@ if __name__ == '__main__':
 
     # Init the example's logger theme
     logger.init(options.ts)
-
-    if options.codec is not None:
-        CODEC = options.codec
-    else:
-        if CODEC is None:
-            CODEC = 'utf-8'
 
     if options.debug is True:
         logging.getLogger().setLevel(logging.DEBUG)

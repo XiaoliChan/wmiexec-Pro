@@ -51,8 +51,11 @@ class filetransfer_Toolkit():
                     )
                 )
         
-        iWbemServices.RemRelease()
-        if return_iWbemServices is True: return iWbemServices
+        # Return cimv2
+        if return_iWbemServices is True:
+            return iWbemServices
+        else:
+            iWbemServices.RemRelease()
     
     # For upload file, we don't need to create class, we can make binary included in vbs script(file dropper).
     # After vbs interval job created, then release your file.

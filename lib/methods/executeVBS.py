@@ -22,11 +22,13 @@ class executeVBS_Toolkit():
         else:
             logging.info('%s - OK' % banner)
 
-    def ExecuteVBS(self, vbs_file=None, vbs_content=None, filer_Query=None, timer=1000, returnTag=False):
+    def ExecuteVBS(self, vbs_file=None, vbs_content=None, filer_Query=None, timer=1000, returnTag=False, BlockVerbose=False, iWbemServices=None, return_iWbemServices=False):
         if vbs_content == None and vbs_file != None:
             with open(vbs_file,'r') as f: vbs_content = f.read()
-        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/subscription', NULL, NULL)
-        self.iWbemLevel1Login.RemRelease()
+        
+        if iWbemServices is None:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/subscription', NULL, NULL)
+            self.iWbemLevel1Login.RemRelease()
         tag = "windows-object-" + str(uuid.uuid4())
 
         # Copy from wmipersist.py
@@ -40,8 +42,7 @@ class executeVBS_Toolkit():
         # Don't output verbose
         current=sys.stdout
         sys.stdout = StringIO()
-        self.checkError('Adding ActiveScriptEventConsumer: %s' % tag,
-                        iWbemServices.PutInstance(activeScript.marshalMe()))
+        iWbemServices.PutInstance(activeScript.marshalMe()) if BlockVerbose==True else self.checkError('Adding ActiveScriptEventConsumer: %s' % tag, iWbemServices.PutInstance(activeScript.marshalMe()))
         #result=sys.stdout.getvalue()
         sys.stdout = current
 
@@ -56,8 +57,7 @@ class executeVBS_Toolkit():
             # Don't output verbose
             current=sys.stdout
             sys.stdout = StringIO()
-            self.checkError('Adding EventFilter: %s' % tag,
-                iWbemServices.PutInstance(eventFilter.marshalMe()))
+            iWbemServices.PutInstance(eventFilter.marshalMe()) if BlockVerbose==True else self.checkError('Adding EventFilter: %s' % tag, iWbemServices.PutInstance(eventFilter.marshalMe()))
             sys.stdout = current
 
         else:
@@ -70,8 +70,7 @@ class executeVBS_Toolkit():
             # Don't output verbose
             current=sys.stdout
             sys.stdout = StringIO()
-            self.checkError('Adding IntervalTimerInstruction: %s' % tag,
-                            iWbemServices.PutInstance(wmiTimer.marshalMe()))
+            iWbemServices.PutInstance(wmiTimer.marshalMe()) if BlockVerbose==True else self.checkError('Adding IntervalTimerInstruction: %s' % tag, iWbemServices.PutInstance(wmiTimer.marshalMe()))
             sys.stdout = current
 
             # EventFilter
@@ -85,8 +84,7 @@ class executeVBS_Toolkit():
             # Don't output verbose
             current=sys.stdout
             sys.stdout = StringIO()
-            self.checkError('Adding EventFilter: %s' % tag,
-                iWbemServices.PutInstance(eventFilter.marshalMe()))
+            iWbemServices.PutInstance(eventFilter.marshalMe()) if BlockVerbose==True else self.checkError('Adding EventFilter: %s' % tag, iWbemServices.PutInstance(eventFilter.marshalMe()))
             sys.stdout = current
 
         # Binding EventFilter & EventConsumer
@@ -98,30 +96,30 @@ class executeVBS_Toolkit():
         # Don't output verbose
         current=sys.stdout
         sys.stdout = StringIO()
-        self.checkError('Adding FilterToConsumerBinding',
-                        iWbemServices.PutInstance(filterBinding.marshalMe()))
+        iWbemServices.PutInstance(filterBinding.marshalMe()) if BlockVerbose==True else self.checkError('Adding FilterToConsumerBinding',iWbemServices.PutInstance(filterBinding.marshalMe()))
         sys.stdout = current
         
-        iWbemServices.RemRelease()
-        if returnTag == True: return tag
-
-    def remove_Event(self, tag):
-        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/subscription', NULL, NULL)
-        self.iWbemLevel1Login.RemRelease()
+        #iWbemServices.RemRelease()
         
-        self.checkError('Removing ActiveScriptEventConsumer: %s' % tag,
-                            iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag))
+        if returnTag == True:
+            if return_iWbemServices == True:
+                return tag, iWbemServices
+            else:
+                return tag
+            
 
-        self.checkError('Removing EventFilter: %s' % tag,
-                        iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag))
+    def remove_Event(self, tag, BlockVerbose=False, iWbemServices=None):
+        
+        if iWbemServices is None:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/subscription', NULL, NULL)
+            self.iWbemLevel1Login.RemRelease()
+        
+        iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag) if BlockVerbose==True else self.checkError('Removing ActiveScriptEventConsumer: %s' % tag, iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag))
 
-        self.checkError('Removing IntervalTimerInstruction: %s' % tag,
-                        iWbemServices.DeleteInstance(
-                            '__IntervalTimerInstruction.TimerId="%s"' % tag))
+        iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag) if BlockVerbose==True else self.checkError('Removing EventFilter: %s' % tag, iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag))
 
-        self.checkError('Removing FilterToConsumerBinding',
-                        iWbemServices.DeleteInstance(
-                            r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'
-                            r'Filter="__EventFilter.Name=\"%s\""' % (
-                            tag, tag)))
-        iWbemServices.RemRelease()
+        iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag) if BlockVerbose==True else self.checkError('Removing IntervalTimerInstruction: %s' % tag, iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag))
+
+        iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag)) if BlockVerbose==True else self.checkError('Removing FilterToConsumerBinding', iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag)))
+        
+        #iWbemServices.RemRelease()

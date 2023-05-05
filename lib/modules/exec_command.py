@@ -2,8 +2,11 @@ import uuid
 import time
 import base64
 import os
+import sys
 import time
 import datetime
+import cmd
+import re
 
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
@@ -11,8 +14,9 @@ from impacket.dcerpc.v5.dtypes import NULL
 
 
 class EXEC_COMMAND():
-    def __init__(self, iWbemLevel1Login):
+    def __init__(self, iWbemLevel1Login, codec):
         self.iWbemLevel1Login = iWbemLevel1Login
+        self.codec = codec
     
     def save_ToFile(self, hostname, content):
         path = 'save/'+hostname
@@ -41,9 +45,11 @@ class EXEC_COMMAND():
         
         print("\r\n[+] Command executed!")
 
-        iWbemServices.RemRelease()
         # Return cimv2
-        if return_iWbemServices is True: return iWbemServices
+        if return_iWbemServices is True:
+            return iWbemServices
+        else:
+            iWbemServices.RemRelease()
     
     # For system under NT6, like windows server 2003
     def exec_command_silent_For_UnderNT6(self, command=None):
@@ -103,7 +109,7 @@ class EXEC_COMMAND():
             # Windows will auto remove job after schedule job executed.
             self.exec_command_silent_For_UnderNT6(command)
 
-    def exec_command_WithOutput(self, command, CODEC="gbk", ClassName_StoreOutput=None, save_Result=False, hostname=None, old=False):
+    def exec_command_WithOutput(self, command, ClassName_StoreOutput=None, save_Result=False, hostname=None, old=False):
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
         
@@ -115,7 +121,7 @@ class EXEC_COMMAND():
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
-        iWbemServices_Reuse = class_Method.check_ClassStatus(ClassName=ClassName_StoreOutput, return_iWbemServices=True)
+        iWbemServices_Reuse_cimv2 = class_Method.check_ClassStatus(ClassName=ClassName_StoreOutput, return_iWbemServices=True)
 
         print("[+] Executing command...(Sometime it will take a long time, please wait)")
         if old == False:
@@ -137,21 +143,80 @@ class EXEC_COMMAND():
             tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
             
             # Reuse cimv2
-            iWbemServices_Reuse = self.timer_For_UnderNT6(iWbemServices=iWbemServices_Reuse, return_iWbemServices=True)
+            iWbemServices_Reuse_cimv2 = self.timer_For_UnderNT6(iWbemServices=iWbemServices_Reuse_cimv2, return_iWbemServices=True)
         
         executer.remove_Event(tag)
 
         print("\r\n[+] Getting command results...")
-        command_ResultObject, resp = iWbemServices_Reuse.GetObject('{}.CreationClassName="{}"'.format(ClassName_StoreOutput, CMD_instanceID))
+        command_ResultObject, resp = iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(ClassName_StoreOutput, CMD_instanceID))
         record = dict(command_ResultObject.getProperties())
-        result = base64.b64decode(record['DebugOptions']['value']).decode(CODEC, errors='replace')
+        result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
         print(result)
 
         if save_Result == True and hostname != None:
             self.save_ToFile(hostname, result)
-        
+    
     def clear(self, ClassName_StoreOutput=None):
         if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
 
         class_Method = class_MethodEx(self.iWbemLevel1Login)
         class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
+
+class EXEC_COMMAND_SHELL(cmd.Cmd):
+    def __init__(self, iWbemLevel1Login, dcom, codec):
+        cmd.Cmd.__init__(self)
+        self.codec = codec
+        self.dcom = dcom
+        self.cwd = 'C:\Windows\System32'
+        self.prompt = "%s>" %self.cwd
+        self.intro = '[!] Launching semi-interactive shell - Careful what you execute'
+        self.iWbemLevel1Login = iWbemLevel1Login
+        self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        self.ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
+
+        # Reuse cimv2 namespace to avoid dcom limition
+        class_Method = class_MethodEx(self.iWbemLevel1Login)
+        self.iWbemServices_Reuse_cimv2 = class_Method.check_ClassStatus(self.ClassName_StoreOutput, return_iWbemServices=True)
+        self.iWbemServices_Reuse_subscription = None
+
+    def do_exit(self, line):
+        self.dcom.disconnect()
+        sys.exit(1)
+
+    def process_Result(self, result):
+        tmp_list = re.split(r'\[COMMAND\]|\[PATH\]',result)
+        self.cwd = tmp_list[2].strip('\r\n').lstrip()
+        cmd_Result = tmp_list[1].strip('\r\n').lstrip()
+        self.prompt = "%s>" %self.cwd
+        print(cmd_Result + "\r\n")
+
+    def default(self, line):
+        FileName = str(uuid.uuid4()) + ".log"
+        CMD_instanceID = str(uuid.uuid4())
+        random_TaskName = str(uuid.uuid4())
+
+        command = line
+        if "'" in command: command = command.replace("'",r'"')
+
+        with open('./lib/vbscripts/Exec-Command-WithOutput-Shell.vbs') as f: vbs = f.read()
+        vbs = vbs.replace('REPLACE_WITH_CWD', self.cwd).replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME', self.ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
+        
+        # Reuse subscription namespace to avoid dcom limition
+        if self.iWbemServices_Reuse_subscription is None:
+            tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, return_iWbemServices=True)
+        else:
+            tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription ,return_iWbemServices=True)
+        
+        # Wait 5 seconds for next step.
+        for i in range(5,0,-1):
+            print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
+            time.sleep(1)
+        print("\r\n[+] Results: \r\n")
+
+        self.executer.remove_Event(tag, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription)
+
+        command_ResultObject, resp = self.iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(self.ClassName_StoreOutput, CMD_instanceID))
+        record = dict(command_ResultObject.getProperties())
+        result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
+        self.process_Result(result)
+        
