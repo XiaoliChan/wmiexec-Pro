@@ -203,6 +203,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         print("""
  sleep {seconds}    - set interval time in command execution (default is 5 seconds).
  logging            - logging everythings.
+ codec {code}       - set encoding code
  exit               - exit.
 """)
     
@@ -218,6 +219,13 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
     def do_exit(self, line):
         self.dcom.disconnect()
         sys.exit(1)
+
+    def do_codec(self, line):
+        if all([line]):
+            self.codec = line
+            print("[+] Set encoding code to: %s" %self.codec)
+        else:
+            print("[+] Current encoding code: %s" %self.codec)
 
     def interval_Timer(self, seconds):
         for i in range(seconds,0,-1):
