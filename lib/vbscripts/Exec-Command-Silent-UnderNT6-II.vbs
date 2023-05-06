@@ -28,7 +28,7 @@ Function AddJobWithRes()
 	GetTime()
 	Set objSWbemService = GetObject("Winmgmts:root\cimv2")
     exec_time = "********"&exec_time&"00.000000"&time_zone
-	command = "c:\windows\system32\cmd.exe /c REPLACE_WITH_COMMAND"
+	command = "c:\windows\system32\cmd.exe /Q /c REPLACE_WITH_COMMAND"
     Set objNewJob = objSWbemService.Get("Win32_ScheduledJob")
     errJobCreated = objNewJob.Create(command, exec_time, True , , , True, JobId)
 End Function

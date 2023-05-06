@@ -3,7 +3,7 @@ Dim exec_time
 Dim results_save
 Dim command
 results_save = "C:\Windows\Temp\REPLACE_WITH_FILENAME"
-command = "c:\windows\system32\cmd.exe /c "& Base64StringDecode("REPLACE_WITH_COMMAND") &" 1> " & results_save & " 2>&1"
+command = "c:\windows\system32\cmd.exe /Q /c "& Base64StringDecode("REPLACE_WITH_COMMAND") &" 1> " & results_save & " 2>&1"
 
 ' Avoid execute command duplicated
 If FileExists(results_save) Then

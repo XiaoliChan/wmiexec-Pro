@@ -70,7 +70,7 @@ class EXEC_COMMAND():
         Win32_TimeZone = iEnumWbemClassObject.Next(0xffffffff, 1)[0]
 
         executeTime = "********" + str(execute_time).replace(":", '') + ".000000+" + str(Win32_TimeZone.Bias)
-        command=r'C:\Windows\System32\cmd.exe /c %s'%command
+        command=r'C:\Windows\System32\cmd.exe /Q /c %s'%command
         Win32_ScheduledJob,resp=iWbemServices.GetObject("Win32_ScheduledJob")
         result = Win32_ScheduledJob.Create(command, executeTime, 0, 0, 0, 1)
         if int(result.ReturnValue) == 0:
@@ -113,7 +113,7 @@ class EXEC_COMMAND():
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
         
-        FileName = str(uuid.uuid4()) + ".log"
+        FileName = "windows-object-"+str(uuid.uuid4()) + ".log"
         CMD_instanceID = str(uuid.uuid4())
         random_TaskName = str(uuid.uuid4())
 
@@ -157,9 +157,17 @@ class EXEC_COMMAND():
             self.save_ToFile(hostname, result)
     
     def clear(self, ClassName_StoreOutput=None):
+        # Can't remote delete file via CIM_DataFile class, not thing happened after invoke Delete method of instance.
+        print("[+] Cleanning temporary files and class.")
         if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
 
+        executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         class_Method = class_MethodEx(self.iWbemLevel1Login)
+
+        with open('./lib/vbscripts/RemoveTempFile.vbs') as f: vbs = f.read()
+        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)    
+        executer.remove_Event(tag)
+
         class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
 
 class EXEC_COMMAND_SHELL(cmd.Cmd):
@@ -229,7 +237,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
             self.save_ToFile(content)
 
     def default(self, line):
-        FileName = str(uuid.uuid4()) + ".log"
+        FileName = "windows-object-"+str(uuid.uuid4()) + ".log"
         CMD_instanceID = str(uuid.uuid4())
         random_TaskName = str(uuid.uuid4())
 

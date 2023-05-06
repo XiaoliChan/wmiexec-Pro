@@ -1,7 +1,7 @@
 Dim time_zone
 Dim exec_time
 Dim command
-command = "c:\windows\system32\cmd.exe /c "& Base64StringDecode("REPLACE_WITH_COMMAND")
+command = "c:\windows\system32\cmd.exe /Q /c "& Base64StringDecode("REPLACE_WITH_COMMAND")
 
 AddJobWithRes
 

