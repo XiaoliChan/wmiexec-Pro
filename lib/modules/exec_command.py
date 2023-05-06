@@ -249,8 +249,14 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         
         self.executer.remove_Event(tag, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription)
 
-        command_ResultObject, resp = self.iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(self.ClassName_StoreOutput, CMD_instanceID))
-        record = dict(command_ResultObject.getProperties())
-        result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
-        self.process_Result(result, line)
-        
+        try:
+            command_ResultObject, resp = self.iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(self.ClassName_StoreOutput, CMD_instanceID))
+            record = dict(command_ResultObject.getProperties())
+        except Exception as e:
+            if "WBEM_E_NOT_FOUND" in str(e):
+                print("[-] Get command results failed, probably you may need to increase interval time.")
+            else:
+                print("[-] Unknown error: %s" %str(e))
+        else:
+            result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
+            self.process_Result(result, line)
