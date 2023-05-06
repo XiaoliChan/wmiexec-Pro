@@ -165,8 +165,14 @@ class EXEC_COMMAND():
         class_Method = class_MethodEx(self.iWbemLevel1Login)
 
         with open('./lib/vbscripts/RemoveTempFile.vbs') as f: vbs = f.read()
-        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)    
-        executer.remove_Event(tag)
+        executer.ExecuteVBS(vbs_content=vbs)
+        
+        # Wait 5 seconds for next step.
+        for i in range(5,0,-1):
+            print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
+            time.sleep(1)
+
+        executer.deep_RemoveEvent()
 
         class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
 

@@ -69,7 +69,7 @@ class WMIEXEC:
                 
                 if self.__options.shell == True:
                     try:
-                        executer_Shell = EXEC_COMMAND_SHELL(iWbemLevel1Login, dcom, self.__options.codec)
+                        executer_Shell = EXEC_COMMAND_SHELL(iWbemLevel1Login, dcom, self.__options.codec, addr)
                         executer_Shell.cmdloop()
                     except  (Exception, KeyboardInterrupt) as e:
                         if logging.getLogger().level == logging.DEBUG:
@@ -168,6 +168,8 @@ class WMIEXEC:
                     executer_VBS.ExecuteVBS(vbs_file=self.__options.vbs, timer=self.__options.timer)
                 elif self.__options.remove:
                     executer_VBS.remove_Event(self.__options.remove)
+                elif self.__options.deep_clean == True:
+                    executer_VBS.deep_RemoveEvent()
                 else:
                     print("[-] Wrong operation")
             
@@ -307,6 +309,7 @@ if __name__ == '__main__':
     execute_VBSParser.add_argument('-filter', action='store', help='The WQL filter string that will trigger the script.')
     execute_VBSParser.add_argument('-timer', action='store', help='The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second')
     execute_VBSParser.add_argument('-remove', action='store', help='Remove wmi event with ID.')
+    execute_VBSParser.add_argument('-deep-clean', action='store_true', help='Remove wmi event with auto enumeration.')
 
     # rid_hijack.py
     rid_HijackParser = subparsers.add_parser('rid-hijack', help='RID Hijack.')

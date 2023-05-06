@@ -109,17 +109,42 @@ class executeVBS_Toolkit():
             
 
     def remove_Event(self, tag, BlockVerbose=False, iWbemServices=None):
-        
         if iWbemServices is None:
             iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/subscription', NULL, NULL)
             self.iWbemLevel1Login.RemRelease()
         
-        iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag) if BlockVerbose==True else self.checkError('Removing ActiveScriptEventConsumer: %s' % tag, iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag))
+        if BlockVerbose == True:
+            iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag)
+            iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag)
+            iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag)
+            iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer = "ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag))
+        else:
+            self.checkError('Removing ActiveScriptEventConsumer: %s' % tag, iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag))
+            self.checkError('Removing EventFilter: %s' % tag, iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag))
+            self.checkError('Removing IntervalTimerInstruction: %s' % tag, iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag))
+            self.checkError('Removing FilterToConsumerBinding', iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag)))
 
-        iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag) if BlockVerbose==True else self.checkError('Removing EventFilter: %s' % tag, iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag))
+    def deep_RemoveEvent(self, iWbemServices=None):
+        if iWbemServices is None:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/subscription', NULL, NULL)
+            self.iWbemLevel1Login.RemRelease()
 
-        iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag) if BlockVerbose==True else self.checkError('Removing IntervalTimerInstruction: %s' % tag, iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag))
-
-        iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag)) if BlockVerbose==True else self.checkError('Removing FilterToConsumerBinding', iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag)))
+        for i in ['ActiveScriptEventConsumer', '__EventFilter', '__IntervalTimerInstruction', '__FilterToConsumerBinding']:
+            while True:
+                try:
+                    iEnumWbemClassObject = iWbemServices.ExecQuery("select * from %s" %i)
+                    class_ = iEnumWbemClassObject.Next(0xffffffff,1)[0]
+                    if i == "__IntervalTimerInstruction":
+                        self.checkError('Removing %s: %s' % (i, class_.TimerId), iWbemServices.DeleteInstance('%s.Name="%s"' % (i, class_.TimerId)))
+                    elif i == "__FilterToConsumerBinding":
+                        self.checkError('Removing %s' %i, iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="%s",'r'Filter="%s"' %(class_.Consumer.replace('"','\\"'), class_.Filter.replace('"','\\"'))))
+                    else:
+                        self.checkError('Removing %s: %s' % (i, class_.Name), iWbemServices.DeleteInstance('%s.Name="%s"' % (i, class_.Name)))
+                except Exception as e:
+                    if str(e).find('S_FALSE') < 0:
+                        pass
+                    else:
+                        print('[+] %s has been cleaned!' %i)
+                        break
         
         #iWbemServices.RemRelease()
