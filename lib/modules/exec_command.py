@@ -201,7 +201,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
 
     def do_help(self, line):
         print("""
- delay {seconds}    - set interval time in command execution (default is 5 seconds).
+ sleep {seconds}    - set interval time in command execution (default is 5 seconds).
  logging            - logging everythings.
  exit               - exit.
 """)
@@ -211,7 +211,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         print("[+] Save command result to: {}/{}".format(self.save_Path, self.save_fileName))
         self.logging = True
 
-    def do_delay(self, seconds):
+    def do_sleep(self, seconds):
         print("[+] Set interval time to: %s" %str(seconds))
         self.interval = int(seconds)
 
