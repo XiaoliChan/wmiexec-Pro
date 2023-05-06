@@ -163,13 +163,19 @@ class EXEC_COMMAND():
         class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
 
 class EXEC_COMMAND_SHELL(cmd.Cmd):
-    def __init__(self, iWbemLevel1Login, dcom, codec):
+    def __init__(self, iWbemLevel1Login, dcom, codec, addr):
         cmd.Cmd.__init__(self)
-        self.codec = codec
         self.dcom = dcom
+        self.codec = codec
+        self.hostname = addr
+        self.save_Path = 'save/'+self.hostname
+        self.save_fileName = str(int(time.time())) + ".txt"
+        self.logging = False
+        self.interval = 5
         self.cwd = 'C:\Windows\System32'
         self.prompt = "%s>" %self.cwd
         self.intro = '[!] Launching semi-interactive shell - Careful what you execute'
+        
         self.iWbemLevel1Login = iWbemLevel1Login
         self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         self.ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
@@ -179,16 +185,48 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.iWbemServices_Reuse_cimv2 = class_Method.check_ClassStatus(self.ClassName_StoreOutput, return_iWbemServices=True)
         self.iWbemServices_Reuse_subscription = None
 
+    def do_help(self, line):
+        print("""
+ delay {seconds}    - set interval time in command execution (default is 5 seconds).
+ logging            - logging everythings.
+ exit               - exit.
+""")
+    
+    def do_logging(self, line):
+        print("[+] Start logging.")
+        print("[+] Save command result to: {}/{}".format(self.save_Path, self.save_fileName))
+        self.logging = True
+
+    def do_delay(self, seconds):
+        print("[+] Set interval time to: %s" %str(seconds))
+        self.interval = int(seconds)
+
     def do_exit(self, line):
         self.dcom.disconnect()
         sys.exit(1)
 
-    def process_Result(self, result):
+    def interval_Timer(self, seconds):
+        for i in range(seconds,0,-1):
+            print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
+            time.sleep(1)
+        print("\r\n[+] Results: \r\n")
+
+    def save_ToFile(self, content):
+        if os.path.exists(self.save_Path) == False:
+            os.makedirs(self.save_Path, exist_ok=True)
+        
+        with open("{}/{}".format(self.save_Path, self.save_fileName), 'a+') as f: f.write(content)
+
+    def process_Result(self, result, command):
         tmp_list = re.split(r'\[COMMAND\]|\[PATH\]',result)
         self.cwd = tmp_list[2].strip('\r\n').lstrip()
         cmd_Result = tmp_list[1].strip('\r\n').lstrip()
         self.prompt = "%s>" %self.cwd
         print(cmd_Result + "\r\n")
+        
+        if self.logging == True:
+            content = "{} {}\r\n\r\n{}\r\n\r\n".format(self.prompt, command, cmd_Result)
+            self.save_ToFile(content)
 
     def default(self, line):
         FileName = str(uuid.uuid4()) + ".log"
@@ -207,15 +245,12 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
             tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription ,return_iWbemServices=True)
         
         # Wait 5 seconds for next step.
-        for i in range(5,0,-1):
-            print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
-            time.sleep(1)
-        print("\r\n[+] Results: \r\n")
-
+        self.interval_Timer(self.interval)
+        
         self.executer.remove_Event(tag, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription)
 
         command_ResultObject, resp = self.iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(self.ClassName_StoreOutput, CMD_instanceID))
         record = dict(command_ResultObject.getProperties())
         result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
-        self.process_Result(result)
+        self.process_Result(result, line)
         
