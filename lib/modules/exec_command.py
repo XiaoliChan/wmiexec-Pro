@@ -199,8 +199,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         if "'" in command: command = command.replace("'",r'"')
 
         with open('./lib/vbscripts/Exec-Command-WithOutput-Shell.vbs') as f: vbs = f.read()
-        vbs = vbs.replace('REPLACE_WITH_CWD', self.cwd).replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME', self.ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
-        
+        vbs = vbs.replace('REPLACE_WITH_CWD', base64.b64encode(self.cwd.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME', self.ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
         # Reuse subscription namespace to avoid dcom limition
         if self.iWbemServices_Reuse_subscription is None:
             tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, return_iWbemServices=True)

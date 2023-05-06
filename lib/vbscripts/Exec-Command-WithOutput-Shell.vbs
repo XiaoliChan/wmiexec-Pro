@@ -1,5 +1,7 @@
 Dim command
+Dim cwd
 command = Base64StringDecode("REPLACE_WITH_COMMAND")
+cwd = Base64StringDecode("REPLACE_WITH_CWD")
 
 If FileExists("C:\Windows\Temp\REPLACE_WITH_FILENAME") Then
     inputFile = "C:\Windows\Temp\REPLACE_WITH_FILENAME"
@@ -53,7 +55,7 @@ Else
     Dim Action
     Set Action = taskDefinition.Actions.Create(ActionTypeExec)
     Action.Path = "c:\windows\system32\cmd.exe"
-    Action.arguments = "/c cd /d REPLACE_WITH_CWD & echo [COMMAND] > C:\Windows\Temp\REPLACE_WITH_FILENAME & " & command & " 1>> C:\Windows\Temp\REPLACE_WITH_FILENAME 2>&1 & echo [PATH] >> C:\Windows\Temp\REPLACE_WITH_FILENAME & cd >> C:\Windows\Temp\REPLACE_WITH_FILENAME"
+    Action.arguments = "/c cd /d " & cwd & " & echo [COMMAND] > C:\Windows\Temp\REPLACE_WITH_FILENAME & " & command & " 1>> C:\Windows\Temp\REPLACE_WITH_FILENAME 2>&1 & echo [PATH] >> C:\Windows\Temp\REPLACE_WITH_FILENAME & cd >> C:\Windows\Temp\REPLACE_WITH_FILENAME"
     Dim objNet, LoginUser
     Set objNet = CreateObject("WScript.Network")
     LoginUser = objNet.UserName
