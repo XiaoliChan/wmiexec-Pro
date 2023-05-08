@@ -12,7 +12,6 @@ from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
 
-
 class EXEC_COMMAND():
     def __init__(self, iWbemLevel1Login, codec):
         self.iWbemLevel1Login = iWbemLevel1Login
@@ -147,11 +146,20 @@ class EXEC_COMMAND():
         
         executer.remove_Event(tag)
 
-        print("\r\n[+] Getting command results...")
-        command_ResultObject, resp = iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(ClassName_StoreOutput, CMD_instanceID))
-        record = dict(command_ResultObject.getProperties())
-        result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
-        print(result)
+        try:
+            command_ResultObject, resp = iWbemServices_Reuse_cimv2.GetObject('{}.CreationClassName="{}"'.format(ClassName_StoreOutput, CMD_instanceID))
+        except Exception as e:
+            if "WBEM_E_INVALID_CLASS" in str(e):
+                print("[-] Class %s didn't existed!" %ClassName_StoreOutput)
+            elif "WBEM_E_NOT_FOUND" in str(e):
+                print("[-] Get command results failed, probably you may need to increase interval time.")
+            else:
+                print("[-] Unexpected error:%s" %str(e))
+        else:
+            print("\r\n[+] Getting command results...")
+            record = dict(command_ResultObject.getProperties())
+            result = base64.b64decode(record['DebugOptions']['value']).decode(self.codec, errors='replace')
+            print(result)
 
         if save_Result == True and hostname != None:
             self.save_ToFile(hostname, result)
@@ -191,9 +199,9 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.cwd = 'C:\Windows\System32'
         self.prompt = "%s>" %self.cwd
         self.intro = '[!] Launching semi-interactive shell - Careful what you execute'
+        self.history = []
 
         self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
-        self.executer_Transfer = filetransfer_Toolkit(self.iWbemLevel1Login, self.dcom)
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
@@ -206,6 +214,8 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
  lognuke                        - enable looping cleaning eventlog.
  logging                        - log everythings.
  codec {code}                   - set encoding code
+ history                        - show history commands
+ clear                          - clean the screen
  exit                           - exit.
 """)
     
@@ -230,6 +240,13 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         else:
             print("[+] Current encoding code: %s" %self.codec)
     
+    def do_history(self, line):
+        for i in range(0, len(self.history)):
+            print("   {}  {}".format(str(i+1), self.history[i]))
+
+    def do_clear(self, line):
+        os.system('clear')
+
     def do_exit(self, line):
         self.dcom.disconnect()
         sys.exit(1)
@@ -258,6 +275,9 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
             self.save_ToFile(content)
 
     def default(self, line):
+        # history
+        self.history.append(line)
+
         FileName = "windows-object-"+str(uuid.uuid4()) + ".log"
         CMD_instanceID = str(uuid.uuid4())
         random_TaskName = str(uuid.uuid4())
