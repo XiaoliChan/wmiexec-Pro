@@ -10,6 +10,9 @@ New generation of wmiexec.py.
   <a href="#info">Info</a>
 </li>
 <li>
+  <a href="#special-thanks">Special thanks</a>
+</li>
+<li>
   <a href="#features">Features</a>
 </li>
 <li>
@@ -29,6 +32,12 @@ New generation of wmiexec.py.
 ## Info
 
 The new generation of wmiexec.py, more new features, whole the operations only work with port 135 (don't need smb connection) for AV evasion in lateral movement  (Windows Defender, HuoRong, 360)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Special thanks
+
+##### @[422926799](https://github.com/422926799)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
