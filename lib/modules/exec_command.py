@@ -8,6 +8,7 @@ import datetime
 import cmd
 import re
 
+from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
@@ -179,9 +180,11 @@ class EXEC_COMMAND():
 class EXEC_COMMAND_SHELL(cmd.Cmd):
     def __init__(self, iWbemLevel1Login, dcom, codec, addr):
         cmd.Cmd.__init__(self)
+        self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
         self.codec = codec
         self.hostname = addr
+        self.ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
         self.save_Path = 'save/'+self.hostname
         self.save_fileName = str(int(time.time())) + ".txt"
         self.logging = False
@@ -189,10 +192,9 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.cwd = 'C:\Windows\System32'
         self.prompt = "%s>" %self.cwd
         self.intro = '[!] Launching semi-interactive shell - Careful what you execute'
-        
-        self.iWbemLevel1Login = iWbemLevel1Login
+
         self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
-        self.ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
+        self.executer_Transfer = filetransfer_Toolkit(self.iWbemLevel1Login, self.dcom)
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
@@ -201,24 +203,26 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
 
     def do_help(self, line):
         print("""
- sleep {seconds}    - set interval time in command execution (default is 5 seconds).
- logging            - logging everythings.
- codec {code}       - set encoding code
- exit               - exit.
+ sleep {seconds}                - set interval time in command execution (default is 5 seconds).
+ lognuke                        - enable looping cleaning eventlog.
+ logging                        - log everythings.
+ codec {code}                   - set encoding code
+ exit                           - exit.
 """)
     
-    def do_logging(self, line):
-        print("[+] Start logging.")
-        print("[+] Save command result to: {}/{}".format(self.save_Path, self.save_fileName))
-        self.logging = True
-
     def do_sleep(self, seconds):
         print("[+] Set interval time to: %s" %str(seconds))
         self.interval = int(seconds)
 
-    def do_exit(self, line):
-        self.dcom.disconnect()
-        sys.exit(1)
+    def do_lognuke(self, line):
+        self.executer.ExecuteVBS(vbs_file='lib/vbscripts/ClearEventlog.vbs')
+        print("[+] Nuke is landing.")
+        print("[+] Log cleaning will never stop before use '-clear'")
+
+    def do_logging(self, line):
+        print("[+] Start logging.")
+        print("[+] Save command result to: {}/{}".format(self.save_Path, self.save_fileName))
+        self.logging = True
 
     def do_codec(self, line):
         if all([line]):
@@ -226,6 +230,10 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
             print("[+] Set encoding code to: %s" %self.codec)
         else:
             print("[+] Current encoding code: %s" %self.codec)
+    
+    def do_exit(self, line):
+        self.dcom.disconnect()
+        sys.exit(1)
 
     def interval_Timer(self, seconds):
         for i in range(seconds,0,-1):
