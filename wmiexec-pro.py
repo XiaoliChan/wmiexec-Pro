@@ -308,8 +308,8 @@ if __name__ == '__main__':
     execute_VBSParser.add_argument('-vbs', action='store', help='VBS filename containing the script you want to run')
     execute_VBSParser.add_argument('-filter', action='store', help='The WQL filter string that will trigger the script.')
     execute_VBSParser.add_argument('-timer', action='store', help='The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second')
-    execute_VBSParser.add_argument('-remove', action='store', help='Remove wmi event with ID.')
-    execute_VBSParser.add_argument('-deep-clean', action='store_true', help='Remove wmi event with auto enumeration.')
+    execute_VBSParser.add_argument('-remove', action='store', help='Remove wmi event with specify ID.')
+    execute_VBSParser.add_argument('-deep-clean', action='store_true', help='Remove all wmi events with auto enumeration.')
 
     # rid_hijack.py
     rid_HijackParser = subparsers.add_parser('rid-hijack', help='RID Hijack.')

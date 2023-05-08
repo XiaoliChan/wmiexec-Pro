@@ -8,7 +8,6 @@ import datetime
 import cmd
 import re
 
-from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
@@ -166,14 +165,14 @@ class EXEC_COMMAND():
         class_Method = class_MethodEx(self.iWbemLevel1Login)
 
         with open('./lib/vbscripts/RemoveTempFile.vbs') as f: vbs = f.read()
-        executer.ExecuteVBS(vbs_content=vbs)
+        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
         
         # Wait 5 seconds for next step.
         for i in range(5,0,-1):
             print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
             time.sleep(1)
 
-        executer.deep_RemoveEvent()
+        executer.remove_Event(tag)
 
         class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
 
@@ -217,7 +216,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
     def do_lognuke(self, line):
         self.executer.ExecuteVBS(vbs_file='lib/vbscripts/ClearEventlog.vbs')
         print("[+] Nuke is landing.")
-        print("[+] Log cleaning will never stop before use '-clear'")
+        print("[+] Log cleaning will never stop before use '-deep-clean' in 'execute-vbs' module")
 
     def do_logging(self, line):
         print("[+] Start logging.")
