@@ -104,7 +104,6 @@ class executeVBS_Toolkit():
                 return tag, iWbemServices
             else:
                 return tag
-            
 
     def remove_Event(self, tag, BlockVerbose=False, iWbemServices=None):
         if iWbemServices is None:
@@ -115,7 +114,7 @@ class executeVBS_Toolkit():
             iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag)
             iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag)
             iWbemServices.DeleteInstance('__IntervalTimerInstruction.TimerId="%s"' % tag)
-            iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer = "ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag))
+            iWbemServices.DeleteInstance(r'__FilterToConsumerBinding.Consumer="ActiveScriptEventConsumer.Name=\"%s\"",'r'Filter="__EventFilter.Name=\"%s\""' % (tag, tag))
         else:
             self.checkError('Removing ActiveScriptEventConsumer: %s' % tag, iWbemServices.DeleteInstance('ActiveScriptEventConsumer.Name="%s"' % tag))
             self.checkError('Removing EventFilter: %s' % tag, iWbemServices.DeleteInstance('__EventFilter.Name="%s"' % tag))
