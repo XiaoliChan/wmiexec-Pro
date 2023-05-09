@@ -99,8 +99,6 @@ class executeVBS_Toolkit():
         iWbemServices.PutInstance(filterBinding.marshalMe()) if BlockVerbose==True else self.checkError('Adding FilterToConsumerBinding',iWbemServices.PutInstance(filterBinding.marshalMe()))
         sys.stdout = current
         
-        #iWbemServices.RemRelease()
-        
         if returnTag == True:
             if return_iWbemServices == True:
                 return tag, iWbemServices
@@ -146,5 +144,3 @@ class executeVBS_Toolkit():
                     else:
                         print('[+] %s has been cleaned!' %i)
                         break
-        
-        #iWbemServices.RemRelease()

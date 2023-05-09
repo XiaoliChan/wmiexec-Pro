@@ -118,7 +118,7 @@ class WMIEXEC:
                     print("[-] Wrong operation")
 
             if self.__options.module == "winrm":
-                executer_WINRM = WINRM_Toolkit(iWbemLevel1Login)
+                executer_WINRM = WINRM_Toolkit(iWbemLevel1Login, dcom)
                 if self.__options.enable == True:
                     executer_WINRM.WINRM_Wrapper("enable")
                 elif self.__options.disable == True:

@@ -14,8 +14,6 @@ class AMSI():
         else:
             print("[-] AMSI current is working.")
 
-        iWbemServices.RemRelease()
-
     def amsi_Wrapper(self, flag):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
@@ -31,4 +29,3 @@ class AMSI():
             print("[+] AMSI Bypassed!")
         elif out.uValue == None:
             print("[+] Remove AMSI bypass.")
-        iWbemServices.RemRelease()

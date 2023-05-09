@@ -63,7 +63,6 @@ class Service_Toolkit:
                                                     str(resp.ReturnValue),
                                                     ERROR_MSG[resp.ReturnValue]
                                                     ))
-        iWbemServices.RemRelease()
         
     def control_Service(self, action, serviceName, iWbemServices=None):
         if iWbemServices is None:
@@ -115,8 +114,6 @@ class Service_Toolkit:
                                                             ))
             except:
                 pass
-
-        iWbemServices.RemRelease()
     
     def dump_Service(self, save_FileName, iWbemServices=None):
         if iWbemServices is None:
@@ -147,5 +144,4 @@ class Service_Toolkit:
         print("[+] Whole the services info are dumped to %s"%save_FileName)
         
         iEnumWbemClassObject.RemRelease()
-        iWbemServices.RemRelease()
     # Todo: modify moudles

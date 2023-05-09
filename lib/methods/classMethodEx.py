@@ -44,8 +44,6 @@ class class_MethodEx():
         # Return cimv2
         if return_iWbemServices is True:
             return iWbemServices
-        else:
-            iWbemServices.RemRelease()
 
     def check_ClassStatus(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         if iWbemServices is None:
@@ -65,8 +63,6 @@ class class_MethodEx():
         # Return cimv2
         if return_iWbemServices is True:
             return iWbemServices
-        else:
-            iWbemServices.RemRelease()
 
     def remove_Class(self, ClassName, iWbemServices=None, return_iWbemServices=False):
         if iWbemServices is None:
@@ -83,5 +79,3 @@ class class_MethodEx():
         # Return cimv2
         if return_iWbemServices is True:
             return iWbemServices
-        else:
-            iWbemServices.RemRelease()

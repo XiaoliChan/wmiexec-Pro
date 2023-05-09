@@ -37,7 +37,6 @@ class RDP_Toolkit():
                 iWbemClassObject.SetAllowTSConnections(0)
             else:
                 print("[-] Error action!")
-        iWbemServices.RemRelease()
         # Need to create new iWbemServices interface in order to flush results
         self.query_RDPResult(old)
         
@@ -65,7 +64,6 @@ class RDP_Toolkit():
                 print("[+] RDP disabled!")
             else:
                 print("[+] RDP enabled!")
-        iWbemServices.RemRelease()
 
     def query_RDPPort(self):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/DEFAULT', NULL, NULL)
@@ -73,7 +71,6 @@ class RDP_Toolkit():
         StdRegProv, resp = iWbemServices.GetObject("StdRegProv")
         out = StdRegProv.GetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp', 'PortNumber')
         print("[+] RDP port: " + str(out.uValue))
-        iWbemServices.RemRelease()
 
     # Nt version under 6 not support this.
     def ram_Wrapper(self, flag):
@@ -91,4 +88,3 @@ class RDP_Toolkit():
             print("[+] Restricted Admin Mode enabled!")
         elif out.uValue == None:
             print("[+] Restricted Admin Mode disabled!")
-        iWbemServices.RemRelease()

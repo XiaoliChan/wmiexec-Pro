@@ -18,7 +18,6 @@ class WINRM_Toolkit:
             iWbemClassObject.StopService()
         else:
             print("[-] Error action!")
-        iWbemServices.RemRelease()
         self.configure_Firewall()
     
     def checkError(banner, resp):
@@ -119,4 +118,3 @@ class WINRM_Toolkit:
             print("[+] WINRM enabled!")
         else:
             print("[+] WINRM disable!")
-        iWbemServices.RemRelease()

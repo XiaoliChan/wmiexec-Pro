@@ -8,6 +8,7 @@ import datetime
 import cmd
 import re
 
+from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
@@ -47,8 +48,6 @@ class EXEC_COMMAND():
         # Return cimv2
         if return_iWbemServices is True:
             return iWbemServices
-        else:
-            iWbemServices.RemRelease()
     
     # For system under NT6, like windows server 2003
     def exec_command_silent_For_UnderNT6(self, command=None):
@@ -78,8 +77,6 @@ class EXEC_COMMAND():
             print("[-] Create schedule job for command execution error, code: %s" %str(result.ReturnValue))
 
         self.timer_For_UnderNT6(iWbemServices)
-
-        iWbemServices.RemRelease()
 
     def exec_command_silent(self, command, old=False):
         if "'" in command: command = command.replace("'",r'"')
@@ -202,6 +199,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.history = []
 
         self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        self.fileTransfer = filetransfer_Toolkit(self.iWbemLevel1Login, self.dcom)
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
@@ -212,6 +210,8 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         print("""
  sleep {seconds}                - set interval time in command execution (default is 5 seconds).
  lognuke                        - enable looping cleaning eventlog.
+ upload {src_file, dst_path}    - uploads a local file to the dst_path (dst_path = default current directory)
+ download {src_file}            - downloads pathname to the current local dir
  logging                        - log everythings.
  codec {code}                   - set encoding code
  history                        - show history commands
@@ -219,6 +219,37 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
  exit                           - exit.
 """)
     
+    def do_upload(self, params):
+        if self.iWbemServices_Reuse_subscription == None:
+            print("[-] Execute command first to initialize before doing file transfer!")
+        else:
+            import ntpath
+
+            params = params.split(' ')
+            if len(params) > 1:
+                src_file = params[0]
+                dst_path = params[1]
+            elif len(params) == 1:
+                src_file = params[0]
+                dst_path = self.cwd
+
+            filename = src_file.replace('\\', '/').split('/')[-1]
+            dst_file = ntpath.join(ntpath.join(self.cwd, dst_path), filename)
+
+            self.fileTransfer.uploadFile(src_File=src_file, dest_File=r'%s' %dst_file, iWbemServices_Subscription=self.iWbemServices_Reuse_subscription, iWbemServices_Cimv2=self.iWbemServices_Reuse_cimv2)
+
+    def do_download(self, src_file):
+        if self.iWbemServices_Reuse_subscription == None:
+            print("[-] Execute command first to initialize before doing file transfer!")
+        else:
+            import ntpath
+
+            newPath = ntpath.normpath(ntpath.join(self.cwd, src_file))
+            drive, tail = ntpath.splitdrive(newPath)
+            filename = ntpath.basename(tail)
+
+            self.fileTransfer.downloadFile(target_File=r'%s'%newPath, save_Location="./%s"%filename, iWbemServices_Subscription=self.iWbemServices_Reuse_subscription, iWbemServices_Cimv2=self.iWbemServices_Reuse_cimv2)
+
     def do_sleep(self, seconds):
         print("[+] Set interval time to: %s" %str(seconds))
         self.interval = int(seconds)
