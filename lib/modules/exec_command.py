@@ -278,6 +278,9 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
     def do_clear(self, line):
         os.system('clear')
 
+    def emptyline(self):
+        return False
+
     def do_exit(self, line):
         self.dcom.disconnect()
         sys.exit(1)
