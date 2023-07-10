@@ -123,7 +123,7 @@ WinRM (Only support win7+):
 Firewall (Only support win8+):
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -search-port 445
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -dump (Dump all firewall rules)
-   python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -rule-id (ID from search port) -rule-op [enable/disable/remove] (enable, disable, remove specify rule)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -rule-id (ID from search port) -action [enable/disable/remove] (enable, disable, remove specify rule)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -firewall-profile enable (Enable all firewall profiles)
    python3 wmiexec-pro.py administrator:password@192.168.1.1 firewall -firewall-profile disable (Disable all firewall profiles)
    
