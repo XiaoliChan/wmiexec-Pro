@@ -248,7 +248,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.interval = int(seconds)
 
     def do_lognuke(self, line):
-        self.executer.ExecuteVBS(vbs_file='lib/vbscripts/ClearEventlog.vbs')
+        self.executer.ExecuteVBS(vbs_file='lib/vbscripts/ClearEventlog.vbs', iWbemServices=self.iWbemServices_Reuse_subscription)
         print("[+] Nuke is landing.")
         print("[+] Log cleaning will never stop before use '-deep-clean' in 'execute-vbs' module")
 
