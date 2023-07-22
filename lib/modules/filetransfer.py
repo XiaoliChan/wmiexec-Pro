@@ -94,7 +94,7 @@ class filetransfer_Toolkit():
         iWbemServices_Reuse = self.queryfile_Status(target_File.replace('\\','\\\\'), return_iWbemServices=True, iWbemServices=iWbemServices_Cimv2)
         # Reuse cimv2 namespace
         print("[+] Create evil class for file transfer.")
-        class_Method.check_ClassStatus(ClassName=ClassName_ForDownload, iWbemServices=iWbemServices_Reuse)
+        class_Method.check_ClassStatus(ClassName=ClassName_ForDownload, iWbemServices_Cimv2=iWbemServices_Reuse, iWbemServices_Subscription=iWbemServices_Subscription)
         
         # Load target file into class
         print("[+] Converting file to base64 string and load it into wmi class.")
@@ -124,4 +124,4 @@ class filetransfer_Toolkit():
         if ClassName_StoreOutput == None: ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataStorage"
 
         class_Method = class_MethodEx(self.iWbemLevel1Login)
-        class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
+        class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices_Cimv2=False)

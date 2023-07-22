@@ -117,7 +117,7 @@ class EXEC_COMMAND():
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
-        iWbemServices_Reuse_cimv2 = class_Method.check_ClassStatus(ClassName=ClassName_StoreOutput, return_iWbemServices=True)
+        iWbemServices_Reuse_cimv2, _ = class_Method.check_ClassStatus(ClassName=ClassName_StoreOutput, return_iWbemServices=True)
 
         print("[+] Executing command...(Sometime it will take a long time, please wait)")
         if old == False:
@@ -179,7 +179,7 @@ class EXEC_COMMAND():
 
         executer.remove_Event(tag)
 
-        class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices=False)
+        class_Method.remove_Class(ClassName=ClassName_StoreOutput, return_iWbemServices_Cimv2=False)
 
 class EXEC_COMMAND_SHELL(cmd.Cmd):
     def __init__(self, iWbemLevel1Login, dcom, codec, addr):
@@ -203,8 +203,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
-        self.iWbemServices_Reuse_cimv2 = class_Method.check_ClassStatus(self.ClassName_StoreOutput, return_iWbemServices=True)
-        self.iWbemServices_Reuse_subscription = None
+        self.iWbemServices_Reuse_cimv2, self.iWbemServices_Reuse_subscription = class_Method.check_ClassStatus(self.ClassName_StoreOutput, return_iWbemServices=True)
 
     def do_help(self, line):
         print("""
@@ -220,35 +219,29 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
 """)
     
     def do_upload(self, params):
-        if self.iWbemServices_Reuse_subscription == None:
-            print("[-] Execute command first to initialize before doing file transfer!")
-        else:
-            import ntpath
+        import ntpath
 
-            params = params.split(' ')
-            if len(params) > 1:
-                src_file = params[0]
-                dst_path = params[1]
-            elif len(params) == 1:
-                src_file = params[0]
-                dst_path = self.cwd
+        params = params.split(' ')
+        if len(params) > 1:
+            src_file = params[0]
+            dst_path = params[1]
+        elif len(params) == 1:
+            src_file = params[0]
+            dst_path = self.cwd
 
-            filename = src_file.replace('\\', '/').split('/')[-1]
-            dst_file = ntpath.join(ntpath.join(self.cwd, dst_path), filename)
+        filename = src_file.replace('\\', '/').split('/')[-1]
+        dst_file = ntpath.join(ntpath.join(self.cwd, dst_path), filename)
 
-            self.fileTransfer.uploadFile(src_File=src_file, dest_File=r'%s' %dst_file, iWbemServices_Subscription=self.iWbemServices_Reuse_subscription, iWbemServices_Cimv2=self.iWbemServices_Reuse_cimv2)
+        self.fileTransfer.uploadFile(src_File=src_file, dest_File=r'%s' %dst_file, iWbemServices_Subscription=self.iWbemServices_Reuse_subscription, iWbemServices_Cimv2=self.iWbemServices_Reuse_cimv2)
 
     def do_download(self, src_file):
-        if self.iWbemServices_Reuse_subscription == None:
-            print("[-] Execute command first to initialize before doing file transfer!")
-        else:
-            import ntpath
+        import ntpath
 
-            newPath = ntpath.normpath(ntpath.join(self.cwd, src_file))
-            drive, tail = ntpath.splitdrive(newPath)
-            filename = ntpath.basename(tail)
+        newPath = ntpath.normpath(ntpath.join(self.cwd, src_file))
+        drive, tail = ntpath.splitdrive(newPath)
+        filename = ntpath.basename(tail)
 
-            self.fileTransfer.downloadFile(target_File=r'%s'%newPath, save_Location="./%s"%filename, iWbemServices_Subscription=self.iWbemServices_Reuse_subscription, iWbemServices_Cimv2=self.iWbemServices_Reuse_cimv2)
+        self.fileTransfer.downloadFile(target_File=r'%s'%newPath, save_Location="./%s"%filename, iWbemServices_Subscription=self.iWbemServices_Reuse_subscription, iWbemServices_Cimv2=self.iWbemServices_Reuse_cimv2)
 
     def do_sleep(self, seconds):
         print("[+] Set interval time to: %s" %str(seconds))
