@@ -24,6 +24,7 @@ New generation of wmiexec.py.
 <li><a href="#usage">Usage</a></li>
 <li><a href="#screenshots">Screenshots</a></li>
 <li><a href="#how-it-works">How it works?</a></li>
+<li><a href="#disclaimer">Disclaimer</a></li>
 <li><a href="#references">References</a></li>
 </ol>
 
@@ -218,6 +219,14 @@ RID Hijack:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Disclaimer
+The spirit of this Open Source initiative is to help security researchers, and the community, speed up research and educational activities related to the implementation of networking protocols and stacks.
+
+The information in this repository is for research and educational purposes and not meant to be used in production environments and/or as part of commercial products.
+
+If you desire to use this code or some part of it for your own uses, we recommend applying proper security development life cycle and secure coding practices, as well as generate and track the respective indicators of compromise according to your needs.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## References
 
