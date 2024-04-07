@@ -11,12 +11,15 @@ import re
 from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.Obfuscator import VBSObfuscator
 from impacket.dcerpc.v5.dtypes import NULL
 
 class EXEC_COMMAND():
     def __init__(self, iWbemLevel1Login, codec):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.codec = codec
+
+        self.obfu = VBSObfuscator()
     
     def save_ToFile(self, hostname, content):
         path = 'save/'+hostname
@@ -124,7 +127,7 @@ class EXEC_COMMAND():
             # Experimental: use timer instead of filter query
             with open('./lib/vbscripts/Exec-Command-WithOutput.vbs') as f: vbs = f.read()
             vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
-            tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            tag = executer.ExecuteVBS(vbs_content=self.obfu.generator(vbs), returnTag=True)
             #filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
             #tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
             
@@ -200,6 +203,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
 
         self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         self.fileTransfer = filetransfer_Toolkit(self.iWbemLevel1Login, self.dcom)
+        self.obfu = VBSObfuscator()
 
         # Reuse cimv2 namespace to avoid dcom limition
         class_Method = class_MethodEx(self.iWbemLevel1Login)
@@ -315,6 +319,8 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         with open('./lib/vbscripts/Exec-Command-WithOutput-Shell.vbs') as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_CWD', base64.b64encode(self.cwd.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME', self.ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
         # Reuse subscription namespace to avoid dcom limition
+        
+        vbs = self.obfu.generator(vbs)
         if self.iWbemServices_Reuse_subscription is None:
             tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, return_iWbemServices=True)
         else:

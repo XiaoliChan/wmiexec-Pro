@@ -55,7 +55,7 @@ Else
     Dim Action
     Set Action = taskDefinition.Actions.Create(ActionTypeExec)
     Action.Path = "c:\windows\system32\cmd.exe"
-    Action.arguments = "/Q /c cd /d " & cwd & " & echo [COMMAND] > C:\Windows\Temp\REPLACE_WITH_FILENAME & " & command & " 1>> C:\Windows\Temp\REPLACE_WITH_FILENAME 2>&1 & echo [PATH] >> C:\Windows\Temp\REPLACE_WITH_FILENAME & cd >> C:\Windows\Temp\REPLACE_WITH_FILENAME"
+    Action.arguments = "/Q /c cd /d " & cwd & " & echo [COMMAND] > C:\Windows\Temp\REPLACE_WITH_FILENAME & " & command & " 1>> C:\Windows\Temp\REPLACE_WITH_FILENAME 2>&1 & echo [PATH] >> C:\Windows\Temp\REPLACE_WITH_FILENAME & c^d >> C:\Windows\Temp\REPLACE_WITH_FILENAME"
     Dim objNet, LoginUser
     Set objNet = CreateObject("WScript.Network")
     LoginUser = objNet.UserName
