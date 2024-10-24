@@ -14,6 +14,7 @@ class RID_Hijack_Toolkit():
     def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
+        self.timeout = 5
 
     def save_ToFile(self, hostname, rid, content):
         path = 'save/'+hostname
@@ -82,7 +83,7 @@ class RID_Hijack_Toolkit():
             vbs = vbs.replace("REPLACE_WITH_USER", currentUsers)
             tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
             
-            for i in range(5,0,-1):
+            for i in range(self.timeout,0,-1):
                 print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
                 time.sleep(1)
             
