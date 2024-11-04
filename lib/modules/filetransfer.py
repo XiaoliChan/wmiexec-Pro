@@ -12,6 +12,7 @@ class filetransfer_Toolkit():
     def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
+        self.timeout = 5 # default timeout
     
     @staticmethod
     def checkError(banner, resp):
@@ -71,7 +72,7 @@ class filetransfer_Toolkit():
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
         
         # Wait 5 seconds for windows decode file.
-        for i in range(5,0,-1):
+        for i in range(self.timeout,0,-1):
             print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
             time.sleep(1)
         print('\r\n')
@@ -105,7 +106,7 @@ class filetransfer_Toolkit():
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
         
         # Wait 5 seconds for next step.
-        for i in range(5,0,-1):
+        for i in range(self.timeout,0,-1):
             print(f"[+] Waiting {i}s for next step.", end="\r", flush=True)
             time.sleep(1)
         

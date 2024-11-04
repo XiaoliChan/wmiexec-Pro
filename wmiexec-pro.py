@@ -70,6 +70,7 @@ class WMIEXEC:
                 if self.__options.shell == True:
                     try:
                         executer_Shell = EXEC_COMMAND_SHELL(iWbemLevel1Login, dcom, self.__options.codec, addr)
+                        executer_Shell.interval = self.__options.timeout
                         executer_Shell.cmdloop()
                     except  (Exception, KeyboardInterrupt) as e:
                         if logging.getLogger().level == logging.DEBUG:
@@ -80,6 +81,7 @@ class WMIEXEC:
                         sys.exit(1)
                 else:
                     executer_ExecCommand = EXEC_COMMAND(iWbemLevel1Login, self.__options.codec)
+                    executer_ExecCommand.timeout = self.__options.timeout
                     if all([self.__options.command]) and self.__options.silent == True:
                         executer_ExecCommand.exec_command_silent(command=self.__options.command, old=self.__options.old)
                     elif all([self.__options.command]) and self.__options.silent == False:
@@ -94,6 +96,7 @@ class WMIEXEC:
 
             if self.__options.module == "filetransfer":
                 executer_Transfer = filetransfer_Toolkit(iWbemLevel1Login, dcom)
+                executer_Transfer.timeout = self.__options.timeout
                 if all([self.__options.src_file and self.__options.dest_file]):
                     if self.__options.upload == True:
                         executer_Transfer.uploadFile(src_File=self.__options.src_file, dest_File=r'%s'%self.__options.dest_file)
@@ -175,6 +178,7 @@ class WMIEXEC:
             
             if self.__options.module == "rid-hijack":
                 RID_Hijack = RID_Hijack_Toolkit(iWbemLevel1Login, dcom)
+                RID_Hijack.timeout = self.__options.timeout
                 if self.__options.query == True:
                     RID_Hijack.query_user()
                 elif self.__options.action:
@@ -215,8 +219,8 @@ if __name__ == '__main__':
     parser.add_argument('target', action='store', help='[[domain/]username[:password]@]<targetName or address>')
     parser.add_argument('-ts', action='store_true', help='Adds timestamp to every logging output')
     parser.add_argument('-debug', action='store_true', help='Turn DEBUG output ON')
-    parser.add_argument('-codec', default="gbk", action='store', help='Sets encoding used (codec) from the target\'s output (default '
-                                                       '"gbk"). If errors are detected, run chcp.com at the target, '
+    parser.add_argument('-timeout', default=5, type=int, action='store', help='Set the timeout for the connection')
+    parser.add_argument('-codec', default="gbk", action='store', help='Sets the encoding used (codec) from the target\'s output (default "gbk"). If errors are detected, run chcp.com at the target, '
                                                        'map the result with '
                                                        'https://docs.python.org/3/library/codecs.html#standard-encodings and then execute wmiexec.py '
                                                        'again with -codec and the corresponding codec ')
