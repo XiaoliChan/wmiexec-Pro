@@ -7,6 +7,7 @@ import uuid
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
+from lib.helpers import get_vbs_path
 
 class filetransfer_Toolkit():
     def __init__(self, iWbemLevel1Login, dcom):
@@ -63,7 +64,7 @@ class filetransfer_Toolkit():
         with open(src_File,'rb') as f: binary = f.read()
         binary_EncodeData = base64.b64encode(binary).decode('ascii')
         
-        with open('./lib/vbscripts/WriteFile.vbs') as f: vbs = f.read()
+        with open(get_vbs_path('WriteFile.vbs')) as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_DEST', base64.b64encode(dest_File.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_DATA', binary_EncodeData)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         print("[+] File uploading...")
@@ -100,7 +101,7 @@ class filetransfer_Toolkit():
         # Load target file into class
         print("[+] Converting file to base64 string and load it into wmi class.")
         Data_InstanceID = str(uuid.uuid4())
-        with open('./lib/vbscripts/LocalFileIntoClass.vbs') as f: vbs = f.read()
+        with open(get_vbs_path('LocalFileIntoClass.vbs')) as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_TARGET_FILE', base64.b64encode(target_File.encode('utf-8')).decode('utf-8')).replace('RELEACE_WITH_UUID', Data_InstanceID).replace('REPLACE_WITH_CLASSNAME', ClassName_ForDownload)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)

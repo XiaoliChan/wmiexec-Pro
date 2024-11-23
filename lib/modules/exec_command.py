@@ -13,6 +13,7 @@ from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.methods.Obfuscator import VBSObfuscator
 from impacket.dcerpc.v5.dtypes import NULL
+from lib.helpers import get_vbs_path
 
 class EXEC_COMMAND():
     def __init__(self, iWbemLevel1Login, codec):
@@ -90,7 +91,7 @@ class EXEC_COMMAND():
             
             print("[+] Executing command...(Sometime it will take a long time, please wait)")
 
-            with open('./lib/vbscripts/Exec-Command-Silent.vbs') as f: vbs = f.read()
+            with open(get_vbs_path('Exec-Command-Silent.vbs')) as f: vbs = f.read()
             vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_TASK',random_TaskName)
             
             # Experimental: use timer instead of filter query
@@ -125,7 +126,7 @@ class EXEC_COMMAND():
         print("[+] Executing command...(Sometime it will take a long time, please wait)")
         if old == False:
             # Experimental: use timer instead of filter query
-            with open('./lib/vbscripts/Exec-Command-WithOutput.vbs') as f: vbs = f.read()
+            with open(get_vbs_path('Exec-Command-WithOutput.vbs')) as f: vbs = f.read()
             vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
             tag = executer.ExecuteVBS(vbs_content=self.obfu.generator(vbs), returnTag=True)
             #filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
@@ -137,7 +138,7 @@ class EXEC_COMMAND():
                 time.sleep(1)
         else:
             # Experimental: use timer instead of filter query
-            with open('./lib/vbscripts/Exec-Command-WithOutput-UnderNT6.vbs') as f: vbs = f.read()
+            with open(get_vbs_path('Exec-Command-WithOutput-UnderNT6.vbs')) as f: vbs = f.read()
             vbs = vbs.replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME',ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID)
             tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
             
@@ -172,7 +173,7 @@ class EXEC_COMMAND():
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         class_Method = class_MethodEx(self.iWbemLevel1Login)
 
-        with open('./lib/vbscripts/RemoveTempFile.vbs') as f: vbs = f.read()
+        with open(get_vbs_path('RemoveTempFile.vbs')) as f: vbs = f.read()
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
         
         # Wait 5 seconds for next step.
@@ -252,7 +253,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.interval = int(seconds)
 
     def do_lognuke(self, line):
-        self.executer.ExecuteVBS(vbs_file='lib/vbscripts/ClearEventlog.vbs', iWbemServices=self.iWbemServices_Reuse_subscription)
+        self.executer.ExecuteVBS(vbs_file=get_vbs_path('ClearEventlog.vbs'), iWbemServices=self.iWbemServices_Reuse_subscription)
         print("[+] Nuke is landing.")
         print("[+] Log cleaning will never stop before use '-deep-clean' in 'execute-vbs' module")
 
@@ -316,7 +317,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         command = line
         if "'" in command: command = command.replace("'",r'"')
 
-        with open('./lib/vbscripts/Exec-Command-WithOutput-Shell.vbs') as f: vbs = f.read()
+        with open(get_vbs_path('Exec-Command-WithOutput-Shell.vbs')) as f: vbs = f.read()
         vbs = vbs.replace('REPLACE_WITH_CWD', base64.b64encode(self.cwd.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_COMMAND', base64.b64encode(command.encode('utf-8')).decode('utf-8')).replace('REPLACE_WITH_FILENAME', FileName).replace('REPLACE_WITH_CLASSNAME', self.ClassName_StoreOutput).replace('RELEACE_WITH_UUID',CMD_instanceID).replace('REPLACE_WITH_TASK',random_TaskName)
         # Reuse subscription namespace to avoid dcom limition
         
