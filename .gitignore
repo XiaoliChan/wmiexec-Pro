@@ -1,0 +1,5 @@
+lib/methods/__pycache__/
+lib/modules/__pycache__/
+lib/__pycache__/
+.ruff_cache
+save/

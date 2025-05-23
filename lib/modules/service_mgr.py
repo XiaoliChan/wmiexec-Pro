@@ -4,6 +4,7 @@ import json
 
 from impacket.dcerpc.v5.dtypes import NULL
 
+
 ERROR_MSG = {
     0:"The request was accepted.",
     1:"The request is not supported.",
@@ -36,45 +37,30 @@ class Service_Toolkit:
     def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
-
-    @staticmethod
-    def checkError(banner, resp):
-        call_status = resp.GetCallStatus(0) & 0xffffffff  # interpret as unsigned
-        if call_status != 0:
-            from impacket.dcerpc.v5.dcom.wmi import WBEMSTATUS
-            try:
-                error_name = WBEMSTATUS.enumItems(call_status).name
-            except ValueError:
-                error_name = 'Unknown'
-            logging.error('%s - ERROR: %s (0x%08x)' % (banner, error_name, call_status))
-        else:
-            logging.info('%s - OK' % banner)
+        self.logger = logging.getLogger("wmiexec-pro")
 
     def create_Service(self, serviceName, displayName, binaryPath, technique):
-        iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
+        iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/cimv2", NULL, NULL)
         self.iWbemLevel1Login.RemRelease()
         Service_ClassObject,_ = iWbemServices.GetObject(technique)
         # Format: Name, DisplayName, PathName, ServiceType, ErrorControl, StartMode, DesktopInteract, StartName, StartPassword, LoadOrderGroup, LoadOrderGroupDependencies, ServiceDependencies
-        resp = Service_ClassObject.Create(serviceName, displayName, r'%s'%binaryPath, 16, 0, "Automatic", 0, "LocalSystem", "", "System", "", "")
+        resp = Service_ClassObject.Create(serviceName, displayName, binaryPath, 16, 0, "Automatic", 0, "LocalSystem", "", "System", "", "")
         if resp.ReturnValue == 0:
-            print("[+] Service %s created!" %serviceName)
+            self.logger.log(100, f"Service {serviceName} created!")
         else:
-            print("[-] Return value: {}, reason: {}".format(
-                                                    str(resp.ReturnValue),
-                                                    ERROR_MSG[resp.ReturnValue]
-                                                    ))
+            self.logger.error(f"Return value: {resp.ReturnValue!s}, reason: {ERROR_MSG[resp.ReturnValue]}")
         
     def control_Service(self, action, serviceName, iWbemServices=None):
-        if iWbemServices is None:
-            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
+        if not iWbemServices:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/cimv2", NULL, NULL)
             self.iWbemLevel1Login.RemRelease()
         try:
-            Service_ClassObject,_ = iWbemServices.GetObject('Win32_Service.Name="%s"' %serviceName)
+            Service_ClassObject,_ = iWbemServices.GetObject(f'Win32_Service.Name="{serviceName}"')
         except Exception as e:
             if "WBEM_E_NOT_FOUND" in str(e):
-                print("[-] Service not found!")
+                self.logger.error(f"Service: {serviceName} not found!")
             else:
-                print("[-] Unknown error: %s" %str(e))
+                self.logger.error(f"Unknown error: {e!s}")
             self.dcom.disconnect()
             sys.exit(1)
         else:
@@ -92,32 +78,29 @@ class Service_Toolkit:
                 resp = Service_ClassObject.ChangeStartMode("Manual")
             elif action == "getinfo":
                 record = dict(Service_ClassObject.getProperties())
-                print('[+] Service info: service name: "{}", display name: "{}", path: "{}", service type: "{}", start mode: "{}", service account: "{}", state: "{}", process id: "{}"'.format(
+                self.logger.log(100, 'Service info: service name: "{}", display name: "{}", path: "{}", service type: "{}", start mode: "{}", service account: "{}", state: "{}", process id: "{}"'.format(
                 # ConsentUxUserSvc_6728c
-                        record['Name']['value'],
-                        record['DisplayName']['value'],
-                        record['PathName']['value'],
-                        record['ServiceType']['value'],
-                        record['StartMode']['value'],
-                        "" if record['StartName']['value'] is None else record['StartName']['value'],
-                        record['State']['value'],
-                        str(record['ProcessId']['value'])
+                        record["Name"]["value"],
+                        record["DisplayName"]["value"],
+                        record["PathName"]["value"],
+                        record["ServiceType"]["value"],
+                        record["StartMode"]["value"],
+                        "" if record["StartName"]["value"] is None else record["StartName"]["value"],
+                        record["State"]["value"],
+                        str(record["ProcessId"]["value"])
                 ))
             
             try:
                 if resp.ReturnValue == 0 :
-                    print("[+] Action done!")
+                    self.logger.log(100, "Action done!")
                 else:
-                    print("[-] Return value: {}, reason: {}".format(
-                                                            str(resp.ReturnValue),
-                                                            ERROR_MSG[resp.ReturnValue]
-                                                            ))
-            except:
+                    self.logger.error(f"Return value: {resp.ReturnValue!s}, reason: {ERROR_MSG[resp.ReturnValue]}")
+            except Exception:
                 pass
     
     def dump_Service(self, save_FileName, iWbemServices=None):
-        if iWbemServices is None:
-            iWbemServices = self.iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
+        if not iWbemServices:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/cimv2", NULL, NULL)
             self.iWbemLevel1Login.RemRelease()
         iEnumWbemClassObject = iWbemServices.ExecQuery("SELECT Name, DisplayName, PathName, ServiceType, StartMode, StartName, State, ProcessID FROM Win32_Service")
         full_Results = {}
@@ -126,22 +109,22 @@ class Service_Toolkit:
                 tmp_dict = {}
                 firewall_PortClass = iEnumWbemClassObject.Next(0xffffffff,1)[0]
                 record = dict(firewall_PortClass.getProperties())
-                tmp_dict['ServiceName'] = record['Name']['value']
-                tmp_dict['DisplayName'] = record['DisplayName']['value']
-                tmp_dict['PathName'] = record['PathName']['value']
-                tmp_dict['ServiceType'] = record['ServiceType']['value']
-                tmp_dict['StartMode'] = record['StartMode']['value']
-                tmp_dict['ServiceAccount'] = "" if record['StartName']['value'] is None else record['StartName']['value']
-                tmp_dict['State'] = record['State']['value']
-                tmp_dict['ProcessId'] = str(record['ProcessId']['value'])
-                full_Results[tmp_dict['ServiceName']] = tmp_dict
+                tmp_dict["ServiceName"] = record["Name"]["value"]
+                tmp_dict["DisplayName"] = record["DisplayName"]["value"]
+                tmp_dict["PathName"] = record["PathName"]["value"]
+                tmp_dict["ServiceType"] = record["ServiceType"]["value"]
+                tmp_dict["StartMode"] = record["StartMode"]["value"]
+                tmp_dict["ServiceAccount"] = record["StartName"]["value"] if record["StartName"]["value"] else ""
+                tmp_dict["State"] = record["State"]["value"]
+                tmp_dict["ProcessId"] = str(record["ProcessId"]["value"])
+                full_Results[tmp_dict["ServiceName"]] = tmp_dict
             except Exception as e:
-                if str(e).find('S_FALSE') < 0:
+                if str(e).find("S_FALSE") < 0:
                     pass
                 else:
                     break
-        with open(save_FileName,'w') as f: f.write(json.dumps(full_Results, indent=4))
-        print("[+] Whole the services info are dumped to %s"%save_FileName)
-        
+        with open(save_FileName, "w") as f:
+            f.write(json.dumps(full_Results, indent=4))
+        self.logger.info(f"Whole the services info are dumped to {save_FileName}")
         iEnumWbemClassObject.RemRelease()
     # Todo: modify moudles
