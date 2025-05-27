@@ -36,6 +36,7 @@ class ENUM():
         self.iWbemLevel1Login.RemRelease()
         iEnumWbemClassObject = iWbemServices.ExecQuery("Select Name, CommandLine, Description, ExecutablePath, ProcessId, ParentProcessId, SessionId from Win32_Process")
         full_Results = {}
+        self.logger.info("Retrieving process list")
         while True:
             try:
                 tmp_dict = {}

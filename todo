@@ -1,0 +1,6 @@
+- Fast response in wmi query (switch to execute vbs)
+- More customized configuration
+- Wmi class derived
+- Hashdump shadowcopy & regsecret
+- Modify service
+- SMB takeover
