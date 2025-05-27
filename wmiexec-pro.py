@@ -18,6 +18,7 @@ from lib.modules.eventlog_fucker import eventlog_Toolkit
 from lib.modules.service_mgr import Service_Toolkit
 from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.modules.rid_hijack import RID_Hijack_Toolkit
+from lib.modules.hashdump import Hashdump
 
 from impacket.examples.utils import parse_target
 from impacket import version
@@ -55,8 +56,10 @@ class WMIEXEC:
             
             if self.__options.module == "enum":
                 executer_ENUM = ENUM(iWbemLevel1Login)
-                if self.__options.run:
+                if self.__options.basic:
                     executer_ENUM.basic_Enum()
+                elif self.__options.tasklist:
+                    executer_ENUM.tasklist()
 
             if self.__options.module == "amsi":
                 executer_AMSI = AMSI(iWbemLevel1Login)
@@ -175,6 +178,11 @@ class WMIEXEC:
                         RID_Hijack.BlankPasswordLogin(self.__options.blank_pass_login)
                 if self.__options.restore:
                     RID_Hijack.restore_UserProfile(self.__options.restore)
+            
+            if self.__options.module == "hashdump":
+                executer_Hashdump = Hashdump(iWbemLevel1Login)
+                executer_Hashdump.test()
+                
 
         except (Exception, KeyboardInterrupt) as e:
             if logging.getLogger("wmiexec-pro").level == logging.DEBUG:
@@ -221,7 +229,8 @@ if __name__ == "__main__":
 
     # enumerate.py
     enum_parser = subparsers.add_parser("enum", help="Enumerate system info")
-    enum_parser.add_argument("-run", action="store_true", help="Doing basic enumeration")
+    enum_parser.add_argument("-basic", action="store_true", help="Doing basic enumeration")
+    enum_parser.add_argument("-tasklist", action="store_true", help="Display a list of currently running processes on the system")
 
     # amsi.py
     amsi_parser = subparsers.add_parser("amsi", help='Bypass AMSI with registry key "AmsiEnable".')
@@ -300,6 +309,10 @@ if __name__ == "__main__":
     rid_HijackParser.add_argument("-action", action="store", choices=["hijack", "activate", "deactivate", "grant", "grant-old", "backup", "remove"], help="Action you want to do.")
     rid_HijackParser.add_argument("-blank-pass-login", action="store", choices=["enable", "disable"], help="Enable or disable blank pass login.(for guest user)")
     rid_HijackParser.add_argument("-restore", action="store", help="Restore user profile after you want to do evil operation, need to specify the backup json file)")
+
+    # hashdump.py
+    hashdump_parser = subparsers.add_parser("hashdump", help="Loopping cleanning eventlog.")
+    hashdump_parser.add_argument("-test", action="store_true", help="You know what will happen :)")
 
     if len(sys.argv) == 1:
         parser.print_help()

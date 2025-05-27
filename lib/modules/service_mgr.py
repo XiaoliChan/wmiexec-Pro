@@ -107,8 +107,8 @@ class Service_Toolkit:
         while True:
             try:
                 tmp_dict = {}
-                firewall_PortClass = iEnumWbemClassObject.Next(0xffffffff,1)[0]
-                record = dict(firewall_PortClass.getProperties())
+                query = iEnumWbemClassObject.Next(0xffffffff,1)[0]
+                record = dict(query.getProperties())
                 tmp_dict["ServiceName"] = record["Name"]["value"]
                 tmp_dict["DisplayName"] = record["DisplayName"]["value"]
                 tmp_dict["PathName"] = record["PathName"]["value"]
