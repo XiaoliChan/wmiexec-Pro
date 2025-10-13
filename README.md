@@ -70,9 +70,9 @@ _Only need latest version of Impacket_
    ```sh
    git clone https://github.com/fortra/impacket
    ```
-2. Install imapcket
+2. Install impacket
    ```sh
-   cd imapcket && sudo pip3 install .
+   cd impacket && sudo pip3 install .
    ```
 3. Enjoy it :)
    ```sh
