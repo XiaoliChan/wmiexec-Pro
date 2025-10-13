@@ -4,8 +4,8 @@ import logging
 
 from io import StringIO
 from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.helpers import get_vbs
 from impacket.dcerpc.v5.dtypes import NULL
-from lib.helpers import get_vbs_path
 
 
 class class_MethodEx():
@@ -17,9 +17,7 @@ class class_MethodEx():
     # So lets we jump in vbs :)
     # Prepare for download file
     def create_Class(self, ClassName, iWbemServices_Cimv2=None, iWbemServices_Subscription=None, return_iWbemServices=False):
-        with open(get_vbs_path("CreateClass.vbs")) as f:
-            vbs = f.read()
-
+        vbs = get_vbs("CreateClass.vbs")
         vbs = vbs.replace("REPLACE_WITH_CLASSNAME", ClassName)
 
         self.logger.info(f"Creating class: {ClassName}")

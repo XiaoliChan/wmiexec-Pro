@@ -8,12 +8,12 @@ import cmd
 import re
 import logging
 
+from lib.helpers import get_vbs
 from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.methods.Obfuscator import VBSObfuscator
 from impacket.dcerpc.v5.dtypes import NULL
-from lib.helpers import get_vbs_path
 
 
 class EXEC_COMMAND():
@@ -104,9 +104,7 @@ class EXEC_COMMAND():
 
             self.logger.info("Executing command...(Sometime it will take a long time, please wait)")
 
-            with open(get_vbs_path("Exec-Command-Silent.vbs")) as f:
-                vbs = f.read()
-
+            vbs = get_vbs("Exec-Command-Silent.vbs")
             vbs = vbs.replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_TASK", random_TaskName)
             
             # Experimental: use timer instead of filter query
@@ -141,8 +139,7 @@ class EXEC_COMMAND():
         
         if old:
             # Experimental: use timer instead of filter query
-            with open(get_vbs_path("Exec-Command-WithOutput-UnderNT6.vbs")) as f:
-                vbs = f.read()
+            vbs = get_vbs("Exec-Command-WithOutput-UnderNT6.vbs")
             vbs = vbs.replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_FILENAME", FileName).replace("REPLACE_WITH_CLASSNAME", ClassName_StoreOutput).replace("RELEACE_WITH_UUID", CMD_instanceID)
             tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
             
@@ -150,8 +147,7 @@ class EXEC_COMMAND():
             iWbemServices_Reuse_cimv2 = self.timer_For_UnderNT6(iWbemServices=iWbemServices_Reuse_cimv2, return_iWbemServices=True)
         else:
             # Experimental: use timer instead of filter query
-            with open(get_vbs_path("Exec-Command-WithOutput.vbs")) as f:
-                vbs = f.read()
+            vbs = get_vbs("Exec-Command-WithOutput.vbs")
             vbs = vbs.replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_FILENAME", FileName).replace("REPLACE_WITH_CLASSNAME", ClassName_StoreOutput).replace("RELEACE_WITH_UUID", CMD_instanceID).replace("REPLACE_WITH_TASK", random_TaskName)
             tag = executer.ExecuteVBS(vbs_content=self.obfu.generator(vbs), returnTag=True)
             #filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
@@ -192,8 +188,7 @@ class EXEC_COMMAND():
 
         self.logger.info("Cleanning temporary files and class.")
 
-        with open(get_vbs_path("RemoveTempFile.vbs")) as f:
-            vbs = f.read()
+        vbs = get_vbs("RemoveTempFile.vbs")
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
         
         # Wait 5 seconds for next step.
@@ -340,8 +335,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         if "'" in command:
             command = command.replace("'", '"')
 
-        with open(get_vbs_path("Exec-Command-WithOutput-Shell.vbs")) as f:
-            vbs = f.read()
+        vbs = get_vbs("Exec-Command-WithOutput-Shell.vbs")
         vbs = vbs.replace("REPLACE_WITH_CWD", base64.b64encode(self.cwd.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_FILENAME",  FileName).replace("REPLACE_WITH_CLASSNAME", self.ClassName_StoreOutput).replace("RELEACE_WITH_UUID", CMD_instanceID).replace("REPLACE_WITH_TASK", random_TaskName)
         # Reuse subscription namespace to avoid dcom limition
         

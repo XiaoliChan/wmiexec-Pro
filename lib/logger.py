@@ -33,6 +33,7 @@ class Log:
             handlers=[],
             encoding="utf-8"
         )
+        logging.getLogger("impacket").disabled = True
         self.setup_logger1()
         self.setup_logger2()
     
@@ -40,6 +41,7 @@ class Log:
         logger = logging.getLogger("wmiexec-pro")
         logging.addLevelName(100, "SUCCESS")
         logger.setLevel(self.log_level)
+        logger.propagate = False
         if not logger.handlers:
             logger.addHandler(
                 RichHandler(
@@ -53,6 +55,7 @@ class Log:
         # Set up logging
         logger = logging.getLogger("CountdownLogger")
         logger.setLevel(self.log_level)
+        logger.propagate = False
         # Use the custom handler
         if not logger.handlers:
             logger.addHandler(

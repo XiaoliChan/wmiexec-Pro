@@ -1,5 +1,6 @@
 lib/methods/__pycache__/
 lib/modules/__pycache__/
 lib/__pycache__/
+lib/vbscripts/dev/
 .ruff_cache
 save/

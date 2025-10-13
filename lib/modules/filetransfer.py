@@ -4,10 +4,10 @@ import time
 import sys
 import uuid
 
+from lib.helpers import get_vbs
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeVBS import executeVBS_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
-from lib.helpers import get_vbs_path
 
 
 class filetransfer_Toolkit():
@@ -25,9 +25,10 @@ class filetransfer_Toolkit():
             self.iWbemLevel1Login.RemRelease()
         try:
             self.logger.info(f"Checking target file {file} info")
-            # WQL from ghostpack/sharpwmi
-            iEnumWbemClassObject = iWbemServices.ExecQuery(f'SELECT * from CIM_DataFile WHERE Name = "{file}"')
-            file_Class = iEnumWbemClassObject.Next(0xffffffff,1)[0]
+            file_obj, _ = iWbemServices.GetObject(f'CIM_DataFile.Name="{file}"')
+            # For delete file
+            # Reference: https://github.com/fortra/impacket/issues/1672
+            # iWbemServices.DeleteInstance(f'CIM_DataFile.Name="{file}"')
         except Exception as e:
             if "WBEM_S_FALSE" in str(e):
                 self.logger.error(f"File {file} not existed!")
@@ -36,7 +37,7 @@ class filetransfer_Toolkit():
             self.dcom.disconnect()
             sys.exit(0)
         else:
-            file_Status = dict(file_Class.getProperties())
+            file_Status = dict(file_obj.getProperties())
             self.logger.log(100, "File status: {}, File size: {} KB, File location: {}".format(
                 file_Status["Status"]["value"],
                 file_Status["FileSize"]["value"]/1024,
@@ -55,8 +56,7 @@ class filetransfer_Toolkit():
             binary = f.read()
         binary_EncodeData = base64.b64encode(binary).decode("ascii")
 
-        with open(get_vbs_path("WriteFile.vbs")) as f:
-            vbs = f.read()
+        vbs = get_vbs("WriteFile.vbs")
         vbs = vbs.replace("REPLACE_WITH_DEST", base64.b64encode(dest_File.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_DATA", binary_EncodeData)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
 
@@ -94,8 +94,8 @@ class filetransfer_Toolkit():
         # Load target file into class
         self.logger.info("Converting file to base64 string and load it into wmi class.")
         Data_InstanceID = str(uuid.uuid4())
-        with open(get_vbs_path("LocalFileIntoClass.vbs")) as f:
-            vbs = f.read()
+
+        vbs = get_vbs("LocalFileIntoClass.vbs")
         vbs = vbs.replace("REPLACE_WITH_TARGET_FILE", base64.b64encode(target_File.encode("utf-8")).decode("utf-8")).replace("RELEACE_WITH_UUID", Data_InstanceID).replace("REPLACE_WITH_CLASSNAME", ClassName_ForDownload)
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)

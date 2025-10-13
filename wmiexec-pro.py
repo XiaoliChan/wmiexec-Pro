@@ -181,7 +181,7 @@ class WMIEXEC:
             
             if self.__options.module == "hashdump":
                 executer_Hashdump = Hashdump(iWbemLevel1Login)
-                executer_Hashdump.test()
+                executer_Hashdump.hashdump()
                 
 
         except (Exception, KeyboardInterrupt) as e:
@@ -312,7 +312,7 @@ if __name__ == "__main__":
 
     # hashdump.py
     hashdump_parser = subparsers.add_parser("hashdump", help="Loopping cleanning eventlog.")
-    hashdump_parser.add_argument("-test", action="store_true", help="You know what will happen :)")
+    hashdump_parser.add_argument("-sss", action="store_true", help="You know what will happen :)")
 
     if len(sys.argv) == 1:
         parser.print_help()

@@ -1,7 +1,7 @@
 import logging
 
+from lib.helpers import get_vbs
 from lib.methods.executeVBS import executeVBS_Toolkit
-from lib.helpers import get_vbs_path
 
 
 class eventlog_Toolkit():
@@ -11,7 +11,7 @@ class eventlog_Toolkit():
 
     def fuck_EventLog(self):
         executer = executeVBS_Toolkit(self.iWbemLevel1Login)
-        tag = executer.ExecuteVBS(vbs_file="lib/vbscripts/ClearEventlog.vbs", returnTag=True)
+        tag = executer.ExecuteVBS(vbs_content=get_vbs("ClearEventlog.vbs"), returnTag=True)
         self.logger.warning(f"Keepping note of this tag if you want to stop it: {tag}")
     
     def retrieve_EventLog(self, tag):

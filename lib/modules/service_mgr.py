@@ -3,6 +3,7 @@ import logging
 import json
 
 from impacket.dcerpc.v5.dtypes import NULL
+from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY
 
 
 ERROR_MSG = {
@@ -41,6 +42,7 @@ class Service_Toolkit:
 
     def create_Service(self, serviceName, displayName, binaryPath, technique):
         iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/cimv2", NULL, NULL)
+        iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
         self.iWbemLevel1Login.RemRelease()
         Service_ClassObject,_ = iWbemServices.GetObject(technique)
         # Format: Name, DisplayName, PathName, ServiceType, ErrorControl, StartMode, DesktopInteract, StartName, StartPassword, LoadOrderGroup, LoadOrderGroupDependencies, ServiceDependencies
@@ -53,6 +55,7 @@ class Service_Toolkit:
     def control_Service(self, action, serviceName, iWbemServices=None):
         if not iWbemServices:
             iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/cimv2", NULL, NULL)
+            iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
             self.iWbemLevel1Login.RemRelease()
         try:
             Service_ClassObject,_ = iWbemServices.GetObject(f'Win32_Service.Name="{serviceName}"')
