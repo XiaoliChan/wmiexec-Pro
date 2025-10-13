@@ -314,6 +314,7 @@ if __name__ == "__main__":
     hashdump_parser = subparsers.add_parser("hashdump", help="Loopping cleanning eventlog.")
     hashdump_parser.add_argument("-dump", action="store", choices=["sss", "ntds"], 
                                  help="Action you want to do.")
+    hashdump_parser.add_argument("-dump", action="store", choices=["sss", "ntds"], default="sss", help="Hash type you want to dump")
 
     if len(sys.argv) == 1:
         parser.print_help()
