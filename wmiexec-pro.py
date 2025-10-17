@@ -311,10 +311,9 @@ if __name__ == "__main__":
     rid_HijackParser.add_argument("-restore", action="store", help="Restore user profile after you want to do evil operation, need to specify the backup json file)")
 
     # hashdump.py
-    hashdump_parser = subparsers.add_parser("hashdump", help="Loopping cleanning eventlog.")
-    hashdump_parser.add_argument("-dump", action="store", choices=["sss", "ntds"], 
-                                 help="Action you want to do.")
-    hashdump_parser.add_argument("-dump", action="store", choices=["sss", "ntds"], default="sss", help="Hash type you want to dump")
+    hashdump_parser = subparsers.add_parser("hashdump", help="Dump password hashes from the target system.")
+    hashdump_parser.add_argument("-dump", action="store", choices=["sss", "ntds"], default="sss",
+                               help="Hash type to dump (sss for Security Account Manager, ntds for NTDS.dit)")
 
     if len(sys.argv) == 1:
         parser.print_help()
