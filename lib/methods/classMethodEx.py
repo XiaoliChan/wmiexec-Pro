@@ -3,7 +3,7 @@ import sys
 import logging
 
 from io import StringIO
-from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.executeScript import executeScript_Toolkit
 from lib.helpers import get_vbs
 from impacket.dcerpc.v5.dtypes import NULL
 
@@ -22,13 +22,13 @@ class class_MethodEx():
 
         self.logger.info(f"Creating class: {ClassName}")
 
-        executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        executer = executeScript_Toolkit(self.iWbemLevel1Login)
         # Login into subscription namespace
         if not iWbemServices_Subscription:
             iWbemServices_Subscription = self.iWbemLevel1Login.NTLMLogin("//./root/subscription", NULL, NULL)
             self.iWbemLevel1Login.RemRelease()
 
-        tag, iWbemServices_Subscription = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription, return_iWbemServices=True)
+        tag, iWbemServices_Subscription = executer.ExecuteScript(script_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription, return_iWbemServices=True)
 
         # Wait 5 seconds for next step.
         loger_flush = logging.getLogger("CountdownLogger")

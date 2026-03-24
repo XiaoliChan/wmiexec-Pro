@@ -11,7 +11,7 @@ import logging
 from lib.helpers import get_vbs
 from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
-from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.executeScript import executeScript_Toolkit
 from lib.methods.Obfuscator import VBSObfuscator
 from impacket.dcerpc.v5.dtypes import NULL
 
@@ -99,7 +99,7 @@ class EXEC_COMMAND():
             # Windows will auto remove job after schedule job executed.
             self.exec_command_silent_For_UnderNT6(command)
         else:
-            executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+            executer = executeScript_Toolkit(self.iWbemLevel1Login)
             random_TaskName = str(uuid.uuid4())
 
             self.logger.info("Executing command...(Sometime it will take a long time, please wait)")
@@ -108,9 +108,9 @@ class EXEC_COMMAND():
             vbs = vbs.replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_TASK", random_TaskName)
             
             # Experimental: use timer instead of filter query
-            tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            tag = executer.ExecuteScript(script_content=vbs, returnTag=True)
             #filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
-            #tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
+            #tag = executer.ExecuteScript(script_content=vbs, filer_Query=filer_Query, returnTag=True)
             
             # Wait 5 seconds for next step.
             for i in range(self.timeout,0,-1):
@@ -120,7 +120,7 @@ class EXEC_COMMAND():
             executer.remove_Event(tag)
 
     def exec_command_WithOutput(self, command, ClassName_StoreOutput=None, save_Result=False, hostname=None, old=False):
-        executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        executer = executeScript_Toolkit(self.iWbemLevel1Login)
         if not ClassName_StoreOutput:
             ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
 
@@ -141,7 +141,7 @@ class EXEC_COMMAND():
             # Experimental: use timer instead of filter query
             vbs = get_vbs("Exec-Command-WithOutput-UnderNT6.vbs")
             vbs = vbs.replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_FILENAME", FileName).replace("REPLACE_WITH_CLASSNAME", ClassName_StoreOutput).replace("RELEACE_WITH_UUID", CMD_instanceID)
-            tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+            tag = executer.ExecuteScript(script_content=vbs, returnTag=True)
             
             # Reuse cimv2
             iWbemServices_Reuse_cimv2 = self.timer_For_UnderNT6(iWbemServices=iWbemServices_Reuse_cimv2, return_iWbemServices=True)
@@ -149,9 +149,9 @@ class EXEC_COMMAND():
             # Experimental: use timer instead of filter query
             vbs = get_vbs("Exec-Command-WithOutput.vbs")
             vbs = vbs.replace("REPLACE_WITH_COMMAND", base64.b64encode(command.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_FILENAME", FileName).replace("REPLACE_WITH_CLASSNAME", ClassName_StoreOutput).replace("RELEACE_WITH_UUID", CMD_instanceID).replace("REPLACE_WITH_TASK", random_TaskName)
-            tag = executer.ExecuteVBS(vbs_content=self.obfu.generator(vbs), returnTag=True)
+            tag = executer.ExecuteScript(script_content=self.obfu.generator(vbs), returnTag=True)
             #filer_Query = r"SELECT * FROM __InstanceModificationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'"
-            #tag = executer.ExecuteVBS(vbs_content=vbs, filer_Query=filer_Query, returnTag=True)
+            #tag = executer.ExecuteScript(script_content=vbs, filer_Query=filer_Query, returnTag=True)
             
             # Wait 5 seconds for next step.
             for i in range(self.timeout,0,-1):
@@ -183,13 +183,13 @@ class EXEC_COMMAND():
         if not ClassName_StoreOutput:
             ClassName_StoreOutput = "Win32_OSRecoveryConfigurationDataBackup"
 
-        executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        executer = executeScript_Toolkit(self.iWbemLevel1Login)
         class_Method = class_MethodEx(self.iWbemLevel1Login)
 
         self.logger.info("Cleanning temporary files and class.")
 
         vbs = get_vbs("RemoveTempFile.vbs")
-        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True)
+        tag = executer.ExecuteScript(script_content=vbs, returnTag=True)
         
         # Wait 5 seconds for next step.
         for i in range(self.timeout,0,-1):
@@ -217,7 +217,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.intro = "[!] Launching semi-interactive shell - Careful what you execute"
         self.history = []
 
-        self.executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        self.executer = executeScript_Toolkit(self.iWbemLevel1Login)
         self.fileTransfer = filetransfer_Toolkit(self.iWbemLevel1Login, self.dcom)
         self.obfu = VBSObfuscator()
 
@@ -271,7 +271,7 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         self.logger.info(f"Set interval time to: {self.interval!s}")
 
     def do_lognuke(self, line):
-        self.executer.ExecuteVBS(vbs_file="lib/vbscripts/ClearEventlog.vbs", iWbemServices=self.iWbemServices_Reuse_subscription)
+        self.executer.ExecuteScript(script_content=get_vbs("ClearEventlog.vbs"), iWbemServices=self.iWbemServices_Reuse_subscription)
         self.logger.log(100, "Nuke is landed and log cleaning will never stop before use '-deep-clean' in 'execute-vbs' module")
 
     def do_logging(self, line):
@@ -341,9 +341,9 @@ class EXEC_COMMAND_SHELL(cmd.Cmd):
         
         vbs = self.obfu.generator(vbs)
         if not self.iWbemServices_Reuse_subscription:
-            tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, return_iWbemServices=True)
+            tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteScript(script_content=vbs, returnTag=True, BlockVerbose=True, return_iWbemServices=True)
         else:
-            tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteVBS(vbs_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription ,return_iWbemServices=True)
+            tag, self.iWbemServices_Reuse_subscription = self.executer.ExecuteScript(script_content=vbs, returnTag=True, BlockVerbose=True, iWbemServices=self.iWbemServices_Reuse_subscription ,return_iWbemServices=True)
         
         # Wait 5 seconds for next step.
         self.interval_Timer(self.interval)

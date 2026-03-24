@@ -18,7 +18,7 @@ from lib.modules.winrm import WINRM_Toolkit
 from lib.modules.firewall import Firewall_Toolkit
 from lib.modules.eventlog_fucker import eventlog_Toolkit
 from lib.modules.service_mgr import Service_Toolkit
-from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.executeScript import executeScript_Toolkit
 from lib.modules.rid_hijack import RID_Hijack_Toolkit
 from lib.modules.hashdump import Hashdump
 
@@ -151,16 +151,18 @@ class WMIEXEC:
                 if self.__options.dump:
                     executer_Service.dump_Service(self.__options.dump)
 
-            if self.__options.module == "execute-vbs":
-                executer_VBS = executeVBS_Toolkit(iWbemLevel1Login)
-                if self.__options.vbs and self.__options.filter:
-                    executer_VBS.ExecuteVBS(vbs_file=self.__options.vbs, filer_Query=self.__options.filter)
-                if self.__options.vbs and self.__options.timer:
-                    executer_VBS.ExecuteVBS(vbs_file=self.__options.vbs, timer=self.__options.timer)
+            if self.__options.module == "execute-script":
+                executer_Script = executeScript_Toolkit(iWbemLevel1Login)
+                if self.__options.lang == "JScript": script_lang = "JScript"
+                else: script_lang = "VBScript"
+                if self.__options.script and self.__options.filter:
+                    executer_Script.ExecuteScript(script_lang=script_lang, script_file=self.__options.script, filer_Query=self.__options.filter)
+                if self.__options.script and self.__options.timer:
+                    executer_Script.ExecuteScript(script_lang=script_lang, script_file=self.__options.script, timer=self.__options.timer)
                 if self.__options.remove:
-                    executer_VBS.remove_Event(self.__options.remove)
+                    executer_Script.remove_Event(self.__options.remove)
                 if self.__options.deep_clean:
-                    executer_VBS.deep_RemoveEvent()
+                    executer_Script.deep_RemoveEvent()
             
             if self.__options.module == "rid-hijack":
                 RID_Hijack = RID_Hijack_Toolkit(iWbemLevel1Login, dcom)
@@ -295,13 +297,14 @@ if __name__ == "__main__":
                                    help="Alternative class of service object creation.")
     service_MgrParser.add_argument("-dump", action="store", metavar="FILENAME", help="Dump all services to file as json format.")
 
-    # executeVBS.py
-    execute_VBSParser = subparsers.add_parser("execute-vbs", help="Execute vbs file.")
-    execute_VBSParser.add_argument("-vbs", action="store", help="VBS filename containing the script you want to run")
-    execute_VBSParser.add_argument("-filter", action="store", help="The WQL filter string that will trigger the script.")
-    execute_VBSParser.add_argument("-timer", action="store", help="The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second")
-    execute_VBSParser.add_argument("-remove", action="store", help="Remove wmi event with specify ID.")
-    execute_VBSParser.add_argument("-deep-clean", action="store_true", help="Remove all wmi events with auto enumeration.")
+    # executeScript.py
+    execute_ScriptParser = subparsers.add_parser("execute-script", help="Execute script file.")
+    execute_ScriptParser.add_argument("-lang", action="store", help="Specify script language, support 'VBScript' and 'JScript', default is VBScript.")
+    execute_ScriptParser.add_argument("-script", action="store", help="VBS or JS filename containing the script you want to run")
+    execute_ScriptParser.add_argument("-filter", action="store", help="The WQL filter string that will trigger the script.")
+    execute_ScriptParser.add_argument("-timer", action="store", help="The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second")
+    execute_ScriptParser.add_argument("-remove", action="store", help="Remove wmi event with specify ID.")
+    execute_ScriptParser.add_argument("-deep-clean", action="store_true", help="Remove all wmi events with auto enumeration.")
 
     # rid_hijack.py
     rid_HijackParser = subparsers.add_parser("rid-hijack", help="RID Hijack.")

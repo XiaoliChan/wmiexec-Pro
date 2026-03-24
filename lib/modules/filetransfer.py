@@ -6,7 +6,7 @@ import uuid
 
 from lib.helpers import get_vbs
 from lib.methods.classMethodEx import class_MethodEx
-from lib.methods.executeVBS import executeVBS_Toolkit
+from lib.methods.executeScript import executeScript_Toolkit
 from impacket.dcerpc.v5.dtypes import NULL
 
 
@@ -58,11 +58,11 @@ class filetransfer_Toolkit():
 
         vbs = get_vbs("WriteFile.vbs")
         vbs = vbs.replace("REPLACE_WITH_DEST", base64.b64encode(dest_File.encode("utf-8")).decode("utf-8")).replace("REPLACE_WITH_DATA", binary_EncodeData)
-        executer = executeVBS_Toolkit(self.iWbemLevel1Login)
+        executer = executeScript_Toolkit(self.iWbemLevel1Login)
 
         self.logger.info("File uploading (will take a long time if you try to upload large size file)")
         
-        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
+        tag = executer.ExecuteScript(script_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
         
         # Wait 5 seconds for windows decode file.
         for i in range(self.timeout, 0, -1):
@@ -97,8 +97,8 @@ class filetransfer_Toolkit():
 
         vbs = get_vbs("LocalFileIntoClass.vbs")
         vbs = vbs.replace("REPLACE_WITH_TARGET_FILE", base64.b64encode(target_File.encode("utf-8")).decode("utf-8")).replace("RELEACE_WITH_UUID", Data_InstanceID).replace("REPLACE_WITH_CLASSNAME", ClassName_ForDownload)
-        executer = executeVBS_Toolkit(self.iWbemLevel1Login)
-        tag = executer.ExecuteVBS(vbs_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
+        executer = executeScript_Toolkit(self.iWbemLevel1Login)
+        tag = executer.ExecuteScript(script_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription)
         
         # Wait 5 seconds for next step.
         for i in range(self.timeout, 0, -1):

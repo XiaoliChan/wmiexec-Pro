@@ -8,15 +8,15 @@ from impacket.dcerpc.v5.dtypes import NULL
 from lib.checkError import checkError
 
 
-class executeVBS_Toolkit():
+class executeScript_Toolkit():
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.logger = logging.getLogger("wmiexec-pro")
 
-    def ExecuteVBS(self, vbs_file=None, vbs_content=None, filer_Query=None, timer=1000, returnTag=False, BlockVerbose=False, iWbemServices=None, return_iWbemServices=False):
-        if not vbs_content and vbs_file:
-            with open(vbs_file, "r") as f:
-                vbs_content = f.read()
+    def ExecuteScript(self, script_lang="VBScript", script_file=None, script_content=None, filer_Query=None, timer=1000, returnTag=False, BlockVerbose=False, iWbemServices=None, return_iWbemServices=False):
+        if not script_content and script_file:
+            with open(script_file, "r") as f:
+                script_content = f.read()
         
         if not iWbemServices:
             iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/subscription", NULL, NULL)
@@ -29,9 +29,9 @@ class executeVBS_Toolkit():
         activeScript, _ = iWbemServices.GetObject("ActiveScriptEventConsumer")
         activeScript = activeScript.SpawnInstance()
         activeScript.Name = tag
-        activeScript.ScriptingEngine = "VBScript"
+        activeScript.ScriptingEngine = script_lang
         activeScript.CreatorSID = [1, 2, 0, 0, 0, 0, 0, 5, 32, 0, 0, 0, 32, 2, 0, 0]
-        activeScript.ScriptText = vbs_content
+        activeScript.ScriptText = script_content
         # Don't output verbose
         current=sys.stdout
         sys.stdout = StringIO()
