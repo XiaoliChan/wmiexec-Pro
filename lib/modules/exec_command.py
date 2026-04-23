@@ -13,10 +13,51 @@ from lib.modules.filetransfer import filetransfer_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeScript import executeScript_Toolkit
 from lib.methods.Obfuscator import VBSObfuscator
+from lib.module_base import ModuleBase
 from impacket.dcerpc.v5.dtypes import NULL
 
 
-class EXEC_COMMAND():
+class EXEC_COMMAND(ModuleBase):
+    name = "exec-command"
+    description = "Execute command in with/without output way."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(EXEC_COMMAND.name, help=EXEC_COMMAND.description)
+        p.add_argument("-shell", action="store_true", help="Launch a semi-interactive shell")
+        p.add_argument("-command", action="store", help="Specify command to execute")
+        p.add_argument("-old", action="store_true", help="Execute command for old system versio nunder NT6.")
+        p.add_argument("-silent", action="store_true", help="Command execute with output (default is no output)")
+        p.add_argument("-save", action="store_true", help="Save command output to file (not support silent mode)")
+        p.add_argument("-clear", action="store_true", help="Remove temporary class for command result storage")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        addr = kwargs.get("addr", "")
+        if options.shell:
+            try:
+                executer_Shell = EXEC_COMMAND_SHELL(iWbemLevel1Login, dcom, options.codec, addr)
+                executer_Shell.interval = options.timeout
+                executer_Shell.cmdloop()
+            except (Exception, KeyboardInterrupt) as e:
+                if logging.getLogger("wmiexec-pro").level == logging.DEBUG:
+                    import traceback
+                    traceback.print_exc()
+                logging.getLogger("wmiexec-pro").error(str(e))
+                dcom.disconnect()
+                sys.exit(1)
+        else:
+            executer = EXEC_COMMAND(iWbemLevel1Login, options.codec)
+            executer.timeout = options.timeout
+            if options.command:
+                if options.silent:
+                    executer.exec_command_silent(command=options.command, old=options.old)
+                else:
+                    executer.exec_command_WithOutput(command=options.command, save_Result=options.save, hostname=addr, old=options.old)
+            if options.clear:
+                executer.clear()
+
     def __init__(self, iWbemLevel1Login, codec):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.codec = codec

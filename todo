@@ -1,6 +1,6 @@
-- Fast response in wmi query (switch to execute vbs)
+- Fast response in wmi query (switch to execute vbs) -- Done
 - More customized configuration
 - Wmi class derived
-- Hashdump shadowcopy & regsecret
+- Hashdump shadowcopy & regsecret -- Done
 - Modify service
 - SMB takeover

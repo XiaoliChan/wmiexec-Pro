@@ -6,9 +6,37 @@ from io import StringIO
 from impacket.dcerpc.v5.dtypes import NULL
 
 from lib.checkError import checkError
+from lib.module_base import ModuleBase
 
 
-class Firewall_Toolkit:
+class Firewall_Toolkit(ModuleBase):
+    name = "firewall"
+    description = "Firewall abusing."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(Firewall_Toolkit.name, help=Firewall_Toolkit.description)
+        p.add_argument("-search-port", action="store", metavar="port num", help="Search rules associate with the port.")
+        p.add_argument("-dump", action="store", metavar="FILENAME", help="Dump all firewall rules to file as json format.")
+        p.add_argument("-rule-id", action="store", metavar="ID", help='Specify firewall rule instance id to do operation in "-rule-op"')
+        p.add_argument("-action", action="store", default="disable", choices=["enable", "disable", "remove"],
+                       help="Action of firewall rule which you specify.")
+        p.add_argument("-firewall-profile", action="store", choices=["enable", "disable"],
+                       help="Use it on your own risk if you try to do this one.")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        toolkit = Firewall_Toolkit(iWbemLevel1Login)
+        if options.search_port:
+            toolkit.port_Searcher(options.search_port)
+        if options.dump:
+            toolkit.dump_FirewallRules(options.dump)
+        if options.rule_id and options.action:
+            toolkit.rule_Controller(ID=options.rule_id, flag=options.action)
+        if options.firewall_profile:
+            toolkit.FirewallProfile_Controller(options.firewall_profile)
+
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.logger = logging.getLogger("wmiexec-pro")

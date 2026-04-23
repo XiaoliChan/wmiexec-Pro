@@ -1,11 +1,9 @@
-import time
 import sys
 import logging
 
 from io import StringIO
-from lib.methods.executeScript import executeScript_Toolkit
-from lib.helpers import get_vbs
 from impacket.dcerpc.v5.dtypes import NULL
+from impacket.dcerpc.v5.dcom.wmi import CIM_TYPE_ENUM, WBEM_FLAG_CREATE_ONLY
 
 
 class class_MethodEx():
@@ -13,44 +11,33 @@ class class_MethodEx():
         self.iWbemLevel1Login = iWbemLevel1Login
         self.logger = logging.getLogger("wmiexec-pro")
 
-    # Have no idea how to use iWbemServices_Cimv2::PutClass create class object via impacket function remotely.
-    # So lets we jump in vbs :)
-    # Prepare for download file
     def create_Class(self, ClassName, iWbemServices_Cimv2=None, iWbemServices_Subscription=None, return_iWbemServices=False):
-        vbs = get_vbs("CreateClass.vbs")
-        vbs = vbs.replace("REPLACE_WITH_CLASSNAME", ClassName)
-
         self.logger.info(f"Creating class: {ClassName}")
 
-        executer = executeScript_Toolkit(self.iWbemLevel1Login)
-        # Login into subscription namespace
-        if not iWbemServices_Subscription:
-            iWbemServices_Subscription = self.iWbemLevel1Login.NTLMLogin("//./root/subscription", NULL, NULL)
-            self.iWbemLevel1Login.RemRelease()
-
-        tag, iWbemServices_Subscription = executer.ExecuteScript(script_content=vbs, returnTag=True, iWbemServices=iWbemServices_Subscription, return_iWbemServices=True)
-
-        # Wait 5 seconds for next step.
-        loger_flush = logging.getLogger("CountdownLogger")
-        for i in range(5,0,-1):
-            loger_flush.info(f"Waiting {i}s for next step.\r")
-            time.sleep(1)
-
-        # Check class creation status
         if not iWbemServices_Cimv2:
             iWbemServices_Cimv2 = self.iWbemLevel1Login.NTLMLogin("//./root/Cimv2", NULL, NULL)
             self.iWbemLevel1Login.RemRelease()
 
-        try:
-            iWbemServices_Cimv2.GetObject(f'{ClassName}.CreationClassName="Backup"')
-        except Exception as e:
-            self.logger.error(f"Unexpected error: {e!s}")
-            executer.remove_Event(tag)
-        else:
-            self.logger.info(f"Class: {ClassName} has been created!")
-            # Clean up
-            self.logger.info("Stop vbs interval execution after created class.")
-            executer.remove_Event(tag)
+        # Login into subscription namespace (still needed by callers for script execution)
+        if not iWbemServices_Subscription:
+            iWbemServices_Subscription = self.iWbemLevel1Login.NTLMLogin("//./root/subscription", NULL, NULL)
+            self.iWbemLevel1Login.RemRelease()
+
+        # Use native PutClass instead of VBS workaround
+        newClass, _ = iWbemServices_Cimv2.GetObject('')
+        newClass.setClassName(ClassName)
+        newClass.addNewAttribute("CreationClassName", CIM_TYPE_ENUM.CIM_TYPE_STRING, "")
+        newClass.addNewAttribute("DebugOptions", CIM_TYPE_ENUM.CIM_TYPE_STRING, "")
+        iWbemServices_Cimv2.PutClass(newClass.marshalMe(), WBEM_FLAG_CREATE_ONLY)
+
+        # Create initial "Backup" instance
+        createdClass, _ = iWbemServices_Cimv2.GetObject(ClassName)
+        instance = createdClass.SpawnInstance()
+        instance.CreationClassName = "Backup"
+        instance.DebugOptions = "For windows backup services"
+        iWbemServices_Cimv2.PutInstance(instance.marshalMe())
+
+        self.logger.info(f"Class: {ClassName} has been created!")
 
         # Return cimv2
         if return_iWbemServices:

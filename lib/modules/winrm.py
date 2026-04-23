@@ -2,9 +2,28 @@ import logging
 
 from lib.modules.service_mgr import Service_Toolkit
 from lib.modules.firewall import Firewall_Toolkit
+from lib.module_base import ModuleBase
 
 
-class WINRM_Toolkit():
+class WINRM_Toolkit(ModuleBase):
+    name = "winrm"
+    description = "Enable/Disable WINRM service."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(WINRM_Toolkit.name, help=WINRM_Toolkit.description)
+        p.add_argument("-enable", action="store_true", help="Enable WINRM service")
+        p.add_argument("-disable", action="store_true", help="Disable WINRM service")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        toolkit = WINRM_Toolkit(iWbemLevel1Login, dcom)
+        if options.enable:
+            toolkit.WINRM_Wrapper("enable")
+        if options.disable:
+            toolkit.WINRM_Wrapper("disable")
+
     def __init__(self, iWbemLevel1Login, dcom):
         self.logger = logging.getLogger("wmiexec-pro")
         self.iWbemLevel1Login = iWbemLevel1Login

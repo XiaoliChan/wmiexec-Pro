@@ -4,6 +4,7 @@ import json
 
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY
+from lib.module_base import ModuleBase
 
 
 ERROR_MSG = {
@@ -34,7 +35,46 @@ ERROR_MSG = {
     24:"The service is currently paused in the system."
 }
 
-class Service_Toolkit:
+class Service_Toolkit(ModuleBase):
+    name = "service"
+    description = "Service manager"
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(Service_Toolkit.name, help=Service_Toolkit.description)
+        p.add_argument("-action", action="store", choices=["create", "delete", "start", "stop", "disable", "auto-start", "manual-start", "getinfo", "modify"],
+                       help="Action you want to do.")
+        p.add_argument("-service-name", action="store", help="Specify service name.")
+        p.add_argument("-display-name", action="store", help="Specify service display name.")
+        p.add_argument("-bin-path", action="store", help="Specify binary path of service creation/modification.")
+        p.add_argument("-start-mode", action="store", choices=["Automatic", "Manual", "Disabled"], help="Specify start mode for service modification.")
+        p.add_argument("-start-name", action="store", help="Specify service account (e.g. LocalSystem, .\\\\username) for modification.")
+        p.add_argument("-start-password", action="store", help="Specify service account password for modification.")
+        p.add_argument("-class", dest="_class", action="store", choices=["Win32_Service", "Win32_TerminalService", "Win32_BaseService"], default="Win32_Service",
+                       help="Alternative class of service object creation.")
+        p.add_argument("-dump", action="store", metavar="FILENAME", help="Dump all services to file as json format.")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        toolkit = Service_Toolkit(iWbemLevel1Login, dcom)
+        if options.action:
+            if options.action == "create" and all([options.service_name, options.display_name, options.bin_path]):
+                toolkit.create_Service(options.service_name, options.display_name, options.bin_path, options._class)
+            elif options.action == "modify" and options.service_name:
+                toolkit.modify_Service(
+                    options.service_name,
+                    displayName=options.display_name,
+                    binaryPath=options.bin_path,
+                    startMode=options.start_mode,
+                    startName=options.start_name,
+                    startPassword=options.start_password
+                )
+            else:
+                toolkit.control_Service(options.action, options.service_name)
+        if options.dump:
+            toolkit.dump_Service(options.dump)
+
     def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
@@ -130,4 +170,47 @@ class Service_Toolkit:
             f.write(json.dumps(full_Results, indent=4))
         self.logger.info(f"Whole the services info are dumped to {save_FileName}")
         iEnumWbemClassObject.RemRelease()
-    # Todo: modify moudles
+
+    # Win32_Service.Change method: https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/change-method-in-class-win32-service
+    def modify_Service(self, serviceName, displayName=None, binaryPath=None, startMode=None, startName=None, startPassword=None):
+        iWbemServices = self.iWbemLevel1Login.NTLMLogin("//./root/cimv2", NULL, NULL)
+        iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
+        self.iWbemLevel1Login.RemRelease()
+
+        try:
+            Service_ClassObject, _ = iWbemServices.GetObject(f'Win32_Service.Name="{serviceName}"')
+        except Exception as e:
+            if "WBEM_E_NOT_FOUND" in str(e):
+                self.logger.error(f"Service: {serviceName} not found!")
+            else:
+                self.logger.error(f"Unknown error: {e!s}")
+            self.dcom.disconnect()
+            sys.exit(1)
+
+        # Get current service properties as defaults
+        record = dict(Service_ClassObject.getProperties())
+        current_displayName = record["DisplayName"]["value"] or ""
+        current_pathName = record["PathName"]["value"] or ""
+        current_serviceType = record["ServiceType"]["value"]
+        current_startMode = record["StartMode"]["value"] or "Auto"
+        current_startName = record["StartName"]["value"] or "LocalSystem"
+
+        # Format: DisplayName, PathName, ServiceType, ErrorControl, StartMode, DesktopInteract, StartName, StartPassword, LoadOrderGroup, LoadOrderGroupDependencies, ServiceDependencies
+        resp = Service_ClassObject.Change(
+            displayName if displayName else current_displayName,
+            binaryPath if binaryPath else current_pathName,
+            current_serviceType,
+            0,
+            startMode if startMode else current_startMode,
+            0,
+            startName if startName else current_startName,
+            startPassword if startPassword else "",
+            "",
+            "",
+            ""
+        )
+
+        if resp.ReturnValue == 0:
+            self.logger.log(100, f"Service {serviceName} modified!")
+        else:
+            self.logger.error(f"Return value: {resp.ReturnValue!s}, reason: {ERROR_MSG[resp.ReturnValue]}")

@@ -2,9 +2,35 @@ import logging
 
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY
+from lib.module_base import ModuleBase
 
 
-class RDP_Toolkit():
+class RDP_Toolkit(ModuleBase):
+    name = "rdp"
+    description = "Enable/Disable Remote desktop service."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(RDP_Toolkit.name, help=RDP_Toolkit.description)
+        p.add_argument("-enable", action="store_true", help="Enable RDP service")
+        p.add_argument("-enable-ram", action="store_true", help="Enable Restricted Admin Mode for PTH")
+        p.add_argument("-disable", action="store_true", help="Disable RDP service")
+        p.add_argument("-disable-ram", action="store_true", help="Disable Restricted Admin Mode")
+        p.add_argument("-old", action="store_true", help="Enable/Disable RDP for old system versio nunder NT6.")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        toolkit = RDP_Toolkit(iWbemLevel1Login)
+        if options.enable:
+            toolkit.rdp_Wrapper("enable", old=options.old)
+        if options.disable:
+            toolkit.rdp_Wrapper("disable", old=options.old)
+        if options.enable_ram:
+            toolkit.ram_Wrapper("enable")
+        if options.disable_ram:
+            toolkit.ram_Wrapper("disable")
+
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.logger = logging.getLogger("wmiexec-pro")

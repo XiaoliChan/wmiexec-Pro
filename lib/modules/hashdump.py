@@ -7,12 +7,28 @@ import os
 from lib.helpers import get_vbs
 from lib.methods.executeScript import executeScript_Toolkit
 from lib.methods.classMethodEx import class_MethodEx
+from lib.module_base import ModuleBase
 
 from binascii import hexlify
 from impacket.examples.secretsdump import LocalOperations, SAMHashes, LSASecrets, NTDSHashes
 
 
-class Hashdump():
+class Hashdump(ModuleBase):
+    name = "hashdump"
+    description = "Dump password hashes from the target system."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(Hashdump.name, help=Hashdump.description)
+        p.add_argument("-dump", action="store", choices=["sss", "ntds"], default="sss",
+                       help="Hash type to dump (sss for Security Account Manager, ntds for NTDS.dit)")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        executer = Hashdump(iWbemLevel1Login, dumpType=options.dump)
+        executer.hashdump()
+
     def __init__(self, iWbemLevel1Login, dumpType):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.executer = executeScript_Toolkit(self.iWbemLevel1Login)

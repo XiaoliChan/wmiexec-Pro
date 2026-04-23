@@ -6,9 +6,37 @@ from io import StringIO
 from impacket.dcerpc.v5.dtypes import NULL
 
 from lib.checkError import checkError
+from lib.module_base import ModuleBase
 
 
-class executeScript_Toolkit():
+class executeScript_Toolkit(ModuleBase):
+    name = "execute-script"
+    description = "Execute script file."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(executeScript_Toolkit.name, help=executeScript_Toolkit.description)
+        p.add_argument("-lang", action="store", help="Specify script language, support 'VBScript' and 'JScript', default is VBScript.")
+        p.add_argument("-script", action="store", help="VBS or JS filename containing the script you want to run")
+        p.add_argument("-filter", action="store", help="The WQL filter string that will trigger the script.")
+        p.add_argument("-timer", action="store", help="The amount of milliseconds after the script will be triggered, 1000 milliseconds = 1 second")
+        p.add_argument("-remove", action="store", help="Remove wmi event with specify ID.")
+        p.add_argument("-deep-clean", action="store_true", help="Remove all wmi events with auto enumeration.")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        toolkit = executeScript_Toolkit(iWbemLevel1Login)
+        script_lang = "JScript" if options.lang == "JScript" else "VBScript"
+        if options.script and options.filter:
+            toolkit.ExecuteScript(script_lang=script_lang, script_file=options.script, filer_Query=options.filter)
+        if options.script and options.timer:
+            toolkit.ExecuteScript(script_lang=script_lang, script_file=options.script, timer=options.timer)
+        if options.remove:
+            toolkit.remove_Event(options.remove)
+        if options.deep_clean:
+            toolkit.deep_RemoveEvent()
+
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.logger = logging.getLogger("wmiexec-pro")

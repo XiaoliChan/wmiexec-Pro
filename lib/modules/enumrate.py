@@ -1,9 +1,28 @@
 import logging
 
 from impacket.dcerpc.v5.dtypes import NULL
+from lib.module_base import ModuleBase
 
 
-class ENUM():
+class ENUM(ModuleBase):
+    name = "enum"
+    description = "Enumerate system info"
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(ENUM.name, help=ENUM.description)
+        p.add_argument("-basic", action="store_true", help="Doing basic enumeration")
+        p.add_argument("-tasklist", action="store_true", help="Display a list of currently running processes on the system")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        executer = ENUM(iWbemLevel1Login)
+        if options.basic:
+            executer.basic_Enum()
+        elif options.tasklist:
+            executer.tasklist()
+
     def __init__(self, iWbemLevel1Login):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.logger = logging.getLogger("wmiexec-pro")

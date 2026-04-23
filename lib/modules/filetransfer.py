@@ -1,16 +1,57 @@
 import logging
 import base64
+import struct
 import time
 import sys
 import uuid
+import ntpath
 
 from lib.helpers import get_vbs
 from lib.methods.classMethodEx import class_MethodEx
 from lib.methods.executeScript import executeScript_Toolkit
+from lib.module_base import ModuleBase
 from impacket.dcerpc.v5.dtypes import NULL
+from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY
 
 
-class filetransfer_Toolkit():
+class filetransfer_Toolkit(ModuleBase):
+    name = "filetransfer"
+    description = "Upload/Download file through wmi class."
+
+    @staticmethod
+    def register_parser(subparsers):
+        p = subparsers.add_parser(filetransfer_Toolkit.name, help=filetransfer_Toolkit.description)
+        p.add_argument("-upload", action="store_true", help="Upload file.")
+        p.add_argument("-download", action="store_true", help="Download file.")
+        p.add_argument("-src-file", action="store", help="Source file with fully path (include filename)")
+        p.add_argument("-dest-file", action="store", help="Dest file with fully path (include filename)")
+        p.add_argument("-method", action="store", choices=["native", "legacy"], default="native",
+                       help="Download method: native (PS_ModuleFile, Win8+/2012+) or legacy (VBS+WMI class). Default: native with auto-fallback.")
+        p.add_argument("-delete", action="store", metavar="FILEPATH", help="Delete remote file via CIM_DataFile.")
+        p.add_argument("-clear", action="store_true", help="Remove temporary class for storage binary data")
+        return p
+
+    @staticmethod
+    def run(iWbemLevel1Login, dcom, options, **kwargs):
+        toolkit = filetransfer_Toolkit(iWbemLevel1Login, dcom)
+        toolkit.timeout = options.timeout
+        if options.src_file and options.dest_file:
+            if options.upload:
+                toolkit.uploadFile(src_File=options.src_file, dest_File=r"%s" % options.dest_file)
+            if options.download:
+                method = getattr(options, 'method', 'native')
+                if method == "native":
+                    success = toolkit.downloadFile_Native(target_File=options.src_file, save_Location=options.dest_file)
+                    if not success:
+                        logging.info("Falling back to legacy download method...")
+                        toolkit.downloadFile(target_File=options.src_file, save_Location=options.dest_file)
+                else:
+                    toolkit.downloadFile(target_File=options.src_file, save_Location=options.dest_file)
+        if options.delete:
+            toolkit.deleteFile(target_File=options.delete)
+        if options.clear:
+            toolkit.clear()
+
     def __init__(self, iWbemLevel1Login, dcom):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.dcom = dcom
@@ -116,6 +157,65 @@ class filetransfer_Toolkit():
 
         self.logger.info("Stop vbs interval execution after file downloaded")
         executer.remove_Event(tag, iWbemServices=iWbemServices_Subscription)
+
+    # Native download via PS_ModuleFile (root/Microsoft/Windows/Powershellv3)
+    # Reference: https://github.com/0xthirteen/WMI_Proc_Dump
+    # Reference: https://gist.github.com/mattifestation/03079a38f23e0c94c8cd39779f88adf6
+    def downloadFile_Native(self, target_File, save_Location):
+        """Download file via PS_ModuleFile.FileData (PSv3 namespace, no VBS needed)."""
+        PSV3_NAMESPACE = "//./root/Microsoft/Windows/Powershellv3"
+
+        try:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin(PSV3_NAMESPACE, NULL, NULL)
+            iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
+            self.iWbemLevel1Login.RemRelease()
+        except Exception as e:
+            if "WBEM_E_INVALID_NAMESPACE" in str(e):
+                self.logger.error("PSv3 namespace not available (requires Win8+/Server2012+), falling back to legacy method.")
+                return False
+            else:
+                raise
+
+        escaped_path = target_File.replace("\\", "\\\\")
+        try:
+            self.logger.info(f"Downloading {target_File} via PS_ModuleFile...")
+            file_instance, _ = iWbemServices.GetObject(f'PS_ModuleFile.InstanceID="{escaped_path}"')
+        except Exception as e:
+            self.logger.error(f"Failed to read file via PS_ModuleFile: {e!s}")
+            return False
+
+        props = file_instance.getProperties()
+        file_data = props["FileData"]["value"]
+
+        if not file_data:
+            self.logger.error("FileData is empty!")
+            return False
+
+        # FileData format: first 4 bytes (big-endian reversed) = file length, then file content
+        file_length_bytes = bytes(file_data[0:4])[::-1]
+        file_length = int.from_bytes(file_length_bytes, byteorder='little', signed=False)
+        file_bytes = bytes(file_data[4:file_length + 4])
+
+        with open(save_Location, "wb") as f:
+            f.write(file_bytes)
+
+        self.logger.log(100, f"File downloaded and saved to: {save_Location}")
+        return True
+
+    def deleteFile(self, target_File, iWbemServices_Cimv2=None):
+        """Delete remote file via CIM_DataFile."""
+        if not iWbemServices_Cimv2:
+            iWbemServices_Cimv2 = self.iWbemLevel1Login.NTLMLogin("//./root/Cimv2", NULL, NULL)
+            iWbemServices_Cimv2.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
+            self.iWbemLevel1Login.RemRelease()
+
+        escaped_path = target_File.replace("\\", "\\\\")
+        try:
+            file_obj, _ = iWbemServices_Cimv2.GetObject(f"CIM_DataFile.Name='{escaped_path}'")
+            file_obj.Delete(escaped_path)
+            self.logger.log(100, f"Remote file {target_File} deleted.")
+        except Exception as e:
+            self.logger.error(f"Failed to delete file: {e!s}")
 
     def clear(self, ClassName_StoreOutput=None):
         if not ClassName_StoreOutput:
