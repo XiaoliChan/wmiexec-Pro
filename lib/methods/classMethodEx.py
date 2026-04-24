@@ -26,16 +26,9 @@ class class_MethodEx():
         # Use native PutClass instead of VBS workaround
         newClass, _ = iWbemServices_Cimv2.GetObject('')
         newClass.setClassName(ClassName)
-        newClass.addNewAttribute("CreationClassName", CIM_TYPE_ENUM.CIM_TYPE_STRING, "")
-        newClass.addNewAttribute("DebugOptions", CIM_TYPE_ENUM.CIM_TYPE_STRING, "")
+        newClass.addNewAttribute("CreationClassName", CIM_TYPE_ENUM.CIM_TYPE_STRING, "", qualifiers=["key", "read", "write"])
+        newClass.addNewAttribute("DebugOptions", CIM_TYPE_ENUM.CIM_TYPE_STRING, "", qualifiers=["read", "write"])
         iWbemServices_Cimv2.PutClass(newClass.marshalMe(), WBEM_FLAG_CREATE_ONLY)
-
-        # Create initial "Backup" instance
-        createdClass, _ = iWbemServices_Cimv2.GetObject(ClassName)
-        instance = createdClass.SpawnInstance()
-        instance.CreationClassName = "Backup"
-        instance.DebugOptions = "For windows backup services"
-        iWbemServices_Cimv2.PutInstance(instance.marshalMe())
 
         self.logger.info(f"Class: {ClassName} has been created!")
 
@@ -49,7 +42,7 @@ class class_MethodEx():
             self.iWbemLevel1Login.RemRelease()
 
         try:
-            iWbemServices_Cimv2.GetObject(f'{ClassName}.CreationClassName="Backup"')
+            iWbemServices_Cimv2.GetObject(ClassName)
         except Exception as e:
             if "WBEM_E_INVALID_CLASS" in str(e):
                 self.logger.info(f"Class {ClassName} didn't exist, start creating class.")
