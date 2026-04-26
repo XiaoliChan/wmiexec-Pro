@@ -1,4 +1,5 @@
 import struct
+from struct import pack, calcsize
 
 
 def patch_impacket_wmi():
@@ -8,6 +9,12 @@ def patch_impacket_wmi():
     2. addNewAttribute: 支持 qualifiers 参数 (list), 标记属性 qualifier
     3. __createCimTypeQualifierSet -> __buildPropertyQualifierSet: 支持多 qualifier 构建
     4. marshalMe: 解包 4 元素 tuple 并传递 qualifiers
+    5. callMethod: kwargs 形式的 WMI method 呼叫, 未提供的 InParams 以 NdTable=null
+       标记 (等价 wmic 行为), 避免 singleton class 大 Set 方法被迫全参数覆写。
+       以 `cls.callMethod("Set", Foo=1, Bar=2)` 呼叫。
+    6. createMethods-bound dispatcher: 对 class object 自动绑定的方法加一层分派:
+       - 纯 kwargs → callMethod
+       - 其它 → impacket 原 positional 路径 (保持 StdRegProv.SetDWORDValue 等相容)
     """
     from impacket.dcerpc.v5.dcom.wmi import (
         ENCODED_VALUE, IWbemClassObject,
@@ -146,3 +153,197 @@ def patch_impacket_wmi():
         return result
 
     IWbemClassObject.marshalMe = _patched_marshalMe
+
+    # === 补丁 5: callMethod(methodName, **kwargs) — partial-params 呼叫 ===
+    from impacket.dcerpc.v5.dcom.wmi import (
+        OBJECT_BLOCK, INSTANCE_TYPE, HEAP, ENCODING_UNIT,
+        OBJREF_CUSTOM, CLSID_WbemClassObject,
+        CIM_TYPES_REF, HEAPREF, Inherited, CIM_INSTANCE,
+    )
+
+    _SCALAR_HEAP_TYPES = {
+        CIM_TYPE_ENUM.CIM_TYPE_STRING.value,
+        CIM_TYPE_ENUM.CIM_TYPE_DATETIME.value,
+        CIM_TYPE_ENUM.CIM_TYPE_REFERENCE.value,
+    }
+
+    def _callMethod(self, methodName, **kwargs):
+        """以 kwargs 呼叫 WMI 方法,只送指定的 InParams。
+
+        未指定的 InParam 于 NdTable 标记为 null (bit pair = 0b10),remote 端视为
+        "未提供" 保持原有状态。行为对齐 wmic `path CLS call M foo=1`。
+
+        已支援型別: BOOL / 各宽度 UINT / SINT / 各宽度 REAL / STRING / DATETIME /
+        REFERENCE / 以及上述之 CIM_ARRAY_FLAG 变体。未支援: CIM_TYPE_OBJECT
+        (嵌入对象),传入该型别 kwarg 会 raise NotImplementedError。
+
+        Note: 仅对 class object (GetObject 取得) 呼叫 class-level 静态方法。
+        """
+        methods = self.getMethods()
+        if methodName not in methods:
+            raise AttributeError(f"Method {methodName!r} not found on {self.getClassName()}")
+        method_def = methods[methodName]
+        in_params = method_def.get("InParams") or {}
+
+        value_table = b''
+        nd_table_int = 0
+        instance_heap = b''
+
+        params_class_name = ENCODED_STRING()
+        params_class_name['Character'] = '__PARAMETERS'
+        instance_heap += params_class_name.getData()
+        cur_heap = len(instance_heap)
+
+        for idx, (pname, pdef) in enumerate(in_params.items()):
+            raw_type = pdef['type']
+            ptype = raw_type & ~(CIM_ARRAY_FLAG | Inherited)
+            is_array = bool(raw_type & CIM_ARRAY_FLAG)
+
+            slot_fmt = HEAPREF[:-2] if is_array else CIM_TYPES_REF[ptype][:-2]
+            slot_w = calcsize(slot_fmt)
+
+            if pname not in kwargs:
+                value_table += b'\x00' * slot_w
+                # NdTable: 2 bits/param, 0b10 = null (not provided)
+                nd_table_int |= (2 << (idx * 2))
+                continue
+
+            val = kwargs[pname]
+            if is_array:
+                if val is None or len(val) == 0:
+                    value_table += pack(slot_fmt, 0)
+                elif ptype in _SCALAR_HEAP_TYPES:
+                    items = []
+                    for sv in val:
+                        s = ENCODED_STRING()
+                        if isinstance(sv, str):
+                            s['Encoded_String_Flag'] = 0x1
+                            s.structure = s.tunicode
+                            s['Character'] = sv.encode('utf-16le')
+                        else:
+                            s['Character'] = sv
+                        items.append(s.getData())
+                    n = len(items)
+                    array_size = pack(HEAPREF[:-2], n)
+                    cur_str_ptr = cur_heap + 4
+                    heap_refs = b''
+                    payload = b''
+                    for j, it in enumerate(items):
+                        heap_refs += pack('<L', cur_str_ptr + 4 * (n - j) + len(payload))
+                        payload += it
+                        cur_str_ptr += 4
+                    value_table += pack('<L', cur_heap)
+                    instance_heap += array_size + heap_refs + payload
+                    cur_heap = len(instance_heap)
+                else:
+                    elem_fmt = CIM_TYPES_REF[ptype][:-2]
+                    value_table += pack('<L', cur_heap)
+                    instance_heap += pack(HEAPREF[:-2], len(val))
+                    for e in val:
+                        instance_heap += pack(elem_fmt, e)
+                    cur_heap = len(instance_heap)
+            elif ptype in _SCALAR_HEAP_TYPES:
+                s = ENCODED_STRING()
+                if isinstance(val, str):
+                    s['Encoded_String_Flag'] = 0x1
+                    s.structure = s.tunicode
+                    s['Character'] = val.encode('utf-16le')
+                else:
+                    s['Character'] = val
+                value_table += pack('<L', cur_heap)
+                instance_heap += s.getData()
+                cur_heap = len(instance_heap)
+            elif ptype == CIM_TYPE_ENUM.CIM_TYPE_OBJECT.value:
+                raise NotImplementedError(
+                    "CIM_TYPE_OBJECT (embedded instance) params not supported by callMethod"
+                )
+            else:
+                if ptype == CIM_TYPE_ENUM.CIM_TYPE_BOOLEAN.value:
+                    val = 1 if val else 0
+                value_table += pack(slot_fmt, val)
+
+        num = len(in_params)
+        nd_bytes = (num * 2 + 7) // 8
+        packed_nd = b''
+        n = nd_table_int
+        for _ in range(nd_bytes):
+            packed_nd += pack('B', n & 0xff)
+            n >>= 8
+
+        instance_type = INSTANCE_TYPE()
+        instance_type['CurrentClass'] = b''
+        instance_type['InstanceQualifierSet'] = b'\x04\x00\x00\x00\x01'
+        instance_type['NdTable_ValueTable'] = packed_nd + value_table
+
+        heap_rec = HEAP()
+        heap_rec['HeapLength'] = len(instance_heap) | 0x80000000
+        heap_rec['HeapItem'] = instance_heap
+        instance_type['InstanceHeap'] = heap_rec
+
+        # Match createMethods ordering: compute EncodingLength BEFORE assigning the
+        # real CurrentClass; CurrentClass bytes are appended trailing.
+        instance_type['EncodingLength'] = len(instance_type)
+        class_part = method_def['InParamsRaw']['ClassType']['CurrentClass']['ClassPart']
+        class_part['ClassHeader']['EncodingLength'] = len(class_part.getData())
+        instance_type['CurrentClass'] = class_part
+
+        obj_block = OBJECT_BLOCK()
+        obj_block.structure += OBJECT_BLOCK.instanceType
+        obj_block['ObjectFlags'] = CIM_INSTANCE
+        obj_block['Decoration'] = b''
+        obj_block['InstanceType'] = instance_type.getData()
+
+        enc = ENCODING_UNIT()
+        enc['ObjectBlock'] = obj_block
+        enc['ObjectEncodingLength'] = len(obj_block)
+
+        objref = OBJREF_CUSTOM()
+        objref['iid'] = self._iid
+        objref['clsid'] = CLSID_WbemClassObject
+        objref['cbExtension'] = 0
+        objref['ObjectReferenceSize'] = len(enc)
+        objref['pObjectData'] = enc
+
+        ws = self._IWbemClassObject__iWbemServices
+        try:
+            return ws.ExecMethod(self.getClassName(), methodName, pInParams=objref)
+        except TypeError as e:
+            # impacket ExecMethod fails to parse OutParams for certain methods whose
+            # response payload is a flat byte blob (e.g. methods returning only
+            # uint32 ReturnValue). The RPC itself succeeded — swallow the parsing
+            # error and return None; caller verifies via subsequent query.
+            if "byte indices must be integers" in str(e):
+                return None
+            raise
+
+    IWbemClassObject.callMethod = _callMethod
+
+    # === 补丁 6: createMethods 绑定的方法支援 kwargs 语法 ===
+    #
+    # impacket 的 createMethods 为 class object 自动绑定方法,
+    # 只接受全部 InParams 的 positional。这里 post-wrap 成 dispatcher,
+    # 支援两种呼叫形式:
+    #   (a) cls.Set(Foo=1, Bar=2)     — Python kwargs, 路由到 patch 5 callMethod,
+    #                                   未指定 InParam 自动 NdTable=null
+    #   (b) cls.Method(a, b, c, ...)  — 原有 positional 不变 (StdRegProv 等沿用)
+
+    _orig_createMethods = IWbemClassObject.createMethods
+
+    def _wrapped_createMethods(self, classOrInstance, methods):
+        _orig_createMethods(self, classOrInstance, methods)
+
+        for methodName in methods:
+            original = getattr(self, methodName)
+
+            def _make_dispatcher(mname, orig):
+                def dispatcher(*args, **kwargs):
+                    if kwargs and not args:
+                        return self.callMethod(mname, **kwargs)
+                    return orig(*args)
+
+                dispatcher.__name__ = mname
+                return dispatcher
+
+            setattr(self, methodName, _make_dispatcher(methodName, original))
+
+    IWbemClassObject.createMethods = _wrapped_createMethods

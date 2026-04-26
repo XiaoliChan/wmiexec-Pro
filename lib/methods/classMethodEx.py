@@ -44,7 +44,10 @@ class class_MethodEx():
         try:
             iWbemServices_Cimv2.GetObject(ClassName)
         except Exception as e:
-            if "WBEM_E_INVALID_CLASS" in str(e):
+            # GetObject on a class path raises WBEM_E_NOT_FOUND when missing;
+            # WBEM_E_INVALID_CLASS shows up on instance-path lookups. Accept both.
+            msg = str(e)
+            if "WBEM_E_NOT_FOUND" in msg or "WBEM_E_INVALID_CLASS" in msg:
                 self.logger.info(f"Class {ClassName} didn't exist, start creating class.")
                 iWbemServices_Cimv2, iWbemServices_Subscription = self.create_Class(ClassName, iWbemServices_Cimv2=iWbemServices_Cimv2, iWbemServices_Subscription=iWbemServices_Subscription,return_iWbemServices=True)
             else:
