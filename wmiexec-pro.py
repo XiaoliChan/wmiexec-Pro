@@ -184,7 +184,7 @@ class WMIEXEC:
                     RID_Hijack.restore_UserProfile(self.__options.restore)
             
             if self.__options.module == "hashdump":
-                executer_Hashdump = Hashdump(iWbemLevel1Login, dumpType=self.__options.dump)
+                executer_Hashdump = Hashdump(iWbemLevel1Login, dumpType=self.__options.dump, use_existing_shadow_copy=self.__options.use_existing)
                 executer_Hashdump.hashdump()
                 
 
@@ -318,7 +318,8 @@ if __name__ == "__main__":
     # hashdump.py
     hashdump_parser = subparsers.add_parser("hashdump", help="Dump password hashes from the target system.")
     hashdump_parser.add_argument("-dump", action="store", choices=["sss", "ntds"], default="sss",
-                               help="Hash type to dump (sss for Security Account Manager, ntds for NTDS.dit)")
+                               help="Hash type to dump (sss for Security Account Manager, ntds for NTDS.dit) - Create and auto-remove shadow copy")
+    hashdump_parser.add_argument("-use-existing", action="store_true", help="Use existing shadow copy")
 
     if len(sys.argv) == 1:
         parser.print_help()

