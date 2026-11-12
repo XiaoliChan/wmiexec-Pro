@@ -87,6 +87,13 @@ class Hashdump():
                         self.logger.info(f"Using existing shadow copy: {shadow_id} with device object: {device_object}")
             else:
                 self.logger.info("No existing shadow copies found. Creating a new one.")
+                input_choice = None
+                
+                while input_choice not in ['y', 'n']:
+                    input_choice = input("Do you want to create a new temporary shadow copy? (y/n): ").strip().lower()
+                    if input_choice == 'n':
+                        self.logger.info("Exiting hashdump process as no shadow copy is available.")
+                        return False
 
         self.logger.info("Starting hashdump process...")
 
